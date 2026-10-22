@@ -4,7 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { redact } from "../skills/rewynd/scripts/samples/redact.ts";
 import { categorize, categorizeCommand } from "../skills/rewynd/scripts/sources/tool-categories.ts";
-import { bugNumbersFrom, numbersIn, validateStory } from "../skills/rewynd/scripts/story/validate-story.ts";
+import { bugNumbersFrom, knownNumbers, numbersIn, validateStory } from "../skills/rewynd/scripts/story/validate-story.ts";
 import { typedText } from "../skills/rewynd/scripts/sources/user-text.ts";
 import { parsePeriod, previousPeriod } from "../skills/rewynd/scripts/stats/period.ts";
 import { resolveTheme, loadThemes } from "../skills/rewynd/scripts/render/render.ts";
@@ -107,6 +107,112 @@ test("story check: the hardest-bug line may use its session's counts from sample
   assert.ok(!r.errors.some((e) => e.startsWith("hardestBug.line")), r.errors.join("\n"));
   assert.ok(r.errors.some((e) => e.startsWith("funnyLines[0]") && e.includes("57")));
   assert.ok(validateStory(story, fakeStats()).errors.some((e) => e.startsWith("hardestBug.line")), "without samples.json the number is unknown");
+});
+
+// --- honesty: wording that names a stat must use THAT stat ---
+// Each case uses a wrong number that DOES exist elsewhere in stats.json, which
+// the old "any number anywhere" check let through.
+
+function claimStats(): Stats {
+  const s = fakeStats();
+  s.phrases = { please: 31, thanks: 12, fixIt: 44, stillBroken: 3, why: 29, sorry: 9 };
+  s.projects = [{ name: "lumen", sessions: 125, minutes: 1840, agents: ["claude-code"] }, { name: "fernpost", sessions: 46, minutes: 620, agents: ["codex"] }];
+  s.time.lateNightSessions = 45;
+  s.agentSwitches = { sameDay: 14, sameProject: 19, topSwitch: { from: "claude-code", to: "codex", count: 21 } };
+  s.backgroundRuns = { total: 760, byAgent: { codex: { review: 702, subagent: 0, other: 0 }, "claude-code": { review: 0, subagent: 58, other: 0 } } };
+  s.byAgent = { "claude-code": { sessions: 190, userMessages: 1, toolCalls: 1, tokensIn: 1, tokensOut: 1, activeMinutes: 3300 }, codex: { sessions: 110, userMessages: 1, toolCalls: 1, tokensIn: 1, tokensOut: 1, activeMinutes: 1860 } };
+  s.longestSession = { project: "lumen", agent: "claude-code", minutes: 412, date: "2026-10-09" };
+  s.totals.activeMinutes = 5172; // 86.2 hours
+  s.totals.activeHours = 86.2;
+  s.tools = [{ category: "edit", label: "Edit files", count: 87 }, { category: "run", label: "Run commands", count: 301 }, { category: "read", label: "Read files", count: 20 }];
+  s.shipped = {
+    commits: 64, aiCommits: 51, aiCommitsByAgent: { claude: 33, codex: 18, copilot: 0, unknown: 0 }, codexConfidence: { exact: 18, branch: 0, time: 0 },
+    aiShare: 0.797, linesAdded: 9100, linesRemoved: 2300,
+    byRepo: [{ name: "lumen", commits: 40, aiCommits: 35, linesAdded: 1, linesRemoved: 1 }, { name: "fernpost", commits: 24, aiCommits: 16, linesAdded: 1, linesRemoved: 1 }],
+    biggestDay: { date: "2026-10-21", commits: 17 },
+  };
+  return s;
+}
+
+/** Errors for one funny line checked against claimStats(). */
+function lineErrors(line: string): string[] {
+  return validateStory({ ...goodStory, captions: {}, personality: { ...goodStory.personality, line: "Sleep is a suggestion." }, backgroundLine: null, funnyLines: [line] }, claimStats()).errors;
+}
+
+test("story check: a stale \"why\" count fails even when the number is some other stat (125 vs 29)", () => {
+  assert.ok(knownNumbers(claimStats()).has(125), "125 is in stats.json (lumen sessions)");
+  const errors = lineErrors('You asked "why" 125 times.');
+  assert.equal(errors.length, 1, errors.join("\n"));
+  assert.match(errors[0], /^funnyLines\[0\]: "why" count is 29, not 125 \(phrases\.why\)/);
+  assert.deepEqual(lineErrors('You asked "why" 29 times.'), []);
+  assert.deepEqual(lineErrors('You asked "why?" 29 times.'), []);
+  assert.deepEqual(lineErrors("29 whys."), []);
+});
+
+test("story check: phrase counts match their own phrase", () => {
+  for (const [ok, bad, msg] of [
+    ["You said please 31 times.", "You said please 12 times.", '"please" count is 31, not 12'],
+    ["Thanked the AI 12 times.", "Said thanks 31 times.", '"thanks" count is 12, not 31'],
+    ["You typed 'fix it' 44 times.", "You typed 'fix it' 45 times.", '"fix it" count is 44, not 45'],
+    ['"still broken" x3.', '"still broken" 9 times.', '"still broken" count is 3, not 9'],
+    ["Said sorry to a computer 9 times.", "Said sorry to a computer 12 times.", '"sorry" count is 9, not 12'],
+  ]) {
+    assert.deepEqual(lineErrors(ok), [], ok);
+    assert.ok(lineErrors(bad).some((e) => e.includes(msg)), `${bad}\n${lineErrors(bad).join("\n")}`);
+  }
+  // Pairs may use the sum.
+  assert.deepEqual(lineErrors("Please and thanks: 43 times."), []);
+  assert.deepEqual(lineErrors('"fix it" or "still broken": 47 times.'), []);
+});
+
+test("story check: late nights, agent switches, reviews and helpers", () => {
+  assert.deepEqual(lineErrors("45 sessions after midnight."), []);
+  assert.ok(lineErrors("46 sessions after midnight.").some((e) => e.includes("late-night session count is 45, not 46")));
+  assert.deepEqual(lineErrors("You cheated on Claude Code with Codex 21 times."), []);
+  assert.deepEqual(lineErrors("You switched agents on 14 days."), [], "sameDay counts too");
+  assert.ok(lineErrors("You cheated on Claude Code with Codex 20 times.").some((e) => e.includes("agent switch count is 21") && e.endsWith("not 20. Use the real number")));
+  assert.deepEqual(lineErrors("Codex double-checked itself 702 times."), []);
+  assert.ok(lineErrors("Codex double-checked itself 760 times.").some((e) => e.includes("background review count is 702, not 760")));
+  assert.deepEqual(lineErrors("Your agents spun up 58 little helpers."), []);
+  assert.ok(lineErrors("Your agents spun up 87 little helpers.").some((e) => e.includes("sub-agent (helper) count is 58, not 87")));
+});
+
+test("story check: hours, sessions, commits and AI share match their stat", () => {
+  // Hours: rounded down like the video, or to 1 decimal.
+  assert.deepEqual(lineErrors("86 hours with AI."), []);
+  assert.deepEqual(lineErrors("86.2 hours with AI."), []);
+  assert.ok(lineErrors("87 hours with AI.").some((e) => e.includes("total active hours is 86") && e.includes("not 87") && e.includes("longest session")), "rounding up fails, and the error says how to name another stat");
+  assert.deepEqual(lineErrors("Longest session: 7 hours."), [], "412 minutes ≈ 7 hours");
+  assert.deepEqual(lineErrors("lumen alone: 30 hours."), [], "a named project uses its own minutes");
+  // Sessions.
+  assert.deepEqual(lineErrors("300 sessions this month."), []);
+  assert.ok(lineErrors("125 sessions this month.").some((e) => e.includes("total session count is 300, not 125")));
+  assert.deepEqual(lineErrors("125 sessions in lumen."), []);
+  assert.deepEqual(lineErrors("Codex: 110 sessions."), []);
+  // Commits.
+  assert.deepEqual(lineErrors("64 commits shipped."), []);
+  assert.deepEqual(lineErrors("51 AI commits."), []);
+  assert.deepEqual(lineErrors("lumen got 40 commits."), []);
+  assert.deepEqual(lineErrors("17 commits on your biggest day."), []);
+  assert.ok(lineErrors("46 commits shipped.").some((e) => e.includes("shipped commit count is") && e.includes("not 46")));
+  assert.ok(lineErrors("fernpost got 40 commits.").some((e) => e.includes("fernpost commits is 24") && e.includes("not 40")));
+  // AI share.
+  assert.deepEqual(lineErrors("80% AI."), []);
+  assert.deepEqual(lineErrors("80% of your commits had an AI co-author."), []);
+  assert.ok(lineErrors("62% of your commits had an AI co-author.").some((e) => e.includes("AI share of commits (%) is 80") && e.includes("not 62")));
+  // A line project's name counts as naming it.
+  const story = (line: string) => ({ ...goodStory, captions: {}, personality: { ...goodStory.personality, line: "Sleep is a suggestion." }, funnyLines: [], backgroundLine: null, projects: [{ name: "fernpost", line }] });
+  assert.deepEqual(validateStory(story("46 sessions of polish"), claimStats()).errors, []);
+  assert.ok(validateStory(story("125 sessions of polish"), claimStats()).errors.some((e) => e.includes("fernpost sessions is 46, not 125")));
+});
+
+test("story check: numbers no wording claims still only need to exist in stats.json", () => {
+  assert.deepEqual(lineErrors("Up 21% on September."), []);
+  assert.deepEqual(lineErrors("17 days in a row. Touch grass?"), []);
+  assert.deepEqual(lineErrors("Peak focus: 2AM, OCTOBER '26."), []);
+  assert.deepEqual(lineErrors("Why? 301 commands later, it worked."), [], "a keyword in another clause doesn't claim the number");
+  const errors = lineErrors("You ran 302 commands.");
+  assert.ok(errors.some((e) => e.includes("the number 302 isn't in stats.json")), errors.join("\n"));
 });
 
 test("typed text: the app's wrappers are peeled off, app-only messages are dropped", () => {
