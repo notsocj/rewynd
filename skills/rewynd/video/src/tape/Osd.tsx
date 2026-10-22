@@ -12,6 +12,7 @@
 import React from "react";
 import { useCurrentFrame, useVideoConfig } from "remotion";
 import { stampDay } from "../components/format";
+import { useIsStill } from "../components/still";
 import { useRecap } from "../recap/context";
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -20,9 +21,10 @@ export const Osd: React.FC<{ counter?: string; right?: string }> = ({ counter, r
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { theme, font, wide, s, props } = useRecap();
+  const still = useIsStill();
 
   // REC dot blinks: on for 2/3 of a second, off for 1/3, like a camcorder.
-  const recOn = frame % fps < fps * 0.66;
+  const recOn = still || frame % fps < fps * 0.66;
   // Fallback timecode: HH:MM:SS:FF, counting from the start of the card.
   const sec = Math.floor(frame / fps);
   const timecode = `00:${pad(Math.floor(sec / 60))}:${pad(sec % 60)}:${pad(frame % fps)}`;

@@ -19,6 +19,7 @@
 import React from "react";
 import { useCurrentFrame, useVideoConfig } from "remotion";
 import type { PersonalityId } from "../../../../contract/recap";
+import { useIsStill } from "../../components/still";
 import { colors } from "../../theme";
 
 const ink = colors.ink;
@@ -176,11 +177,12 @@ const looks: Record<PersonalityId, { sky: string; prompt: string }> = {
 export const Badge: React.FC<{ personality: PersonalityId }> = ({ personality }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
+  const still = useIsStill();
   const t = frame / fps;
   const look = looks[personality] ?? looks["3am-shipper"];
   const icon = icons[personality] ?? icons["3am-shipper"];
   // Classic terminal cursor: on for half a second, off for half a second.
-  const cursorOn = Math.floor(frame / (fps / 2)) % 2 === 0;
+  const cursorOn = still || Math.floor(frame / (fps / 2)) % 2 === 0;
   // Cursor sits right after the prompt. Inter Black averages ~0.58em per
   // character at this size, which is close enough for a short prompt.
   const fontSize = 34;

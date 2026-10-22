@@ -49,7 +49,8 @@ export async function runCommand(command: string, flags: Flags): Promise<unknown
     case "render": {
       const format = str(flags, "format") as DesignPrefs["format"] | undefined;
       if (format && !["vertical", "wide", "both"].includes(format)) throw new Error("--format must be vertical, wide or both");
-      const r = render({ card: flags.card === true, format });
+      if (flags.card === true && flags.carousel === true) throw new Error("pick one: --card or --carousel");
+      const r = render({ card: flags.card === true, carousel: flags.carousel === true, format });
       if ("errors" in r) return { rendered: false, storyErrors: r.errors };
       return { rendered: true, ...r, files: r.files.map(tildify), props: tildify(r.props) };
     }
@@ -64,7 +65,7 @@ export async function runCommand(command: string, flags: Flags): Promise<unknown
     case "--help":
       return {
         usage: "node --disable-warning=ExperimentalWarning scripts/cli.ts <command> [flags]",
-        commands: ["collect [--month YYYY-MM | --year YYYY] [--github]", "save", "status", "story-check", "themes", "prefs [--set JSON]", "render [--card] [--format vertical|wide|both]", "migrate-data --from DIR", "guard"],
+        commands: ["collect [--month YYYY-MM | --year YYYY] [--github]", "save", "status", "story-check", "themes", "prefs [--set JSON]", "render [--card | --carousel] [--format vertical|wide|both]", "migrate-data --from DIR", "guard"],
         flags: ["--data-dir DIR", "--tz Area/City"],
       };
 

@@ -1,7 +1,7 @@
 ---
 name: rewynd
-description: Make a "tape rewind meets terminal" recap video (or one share image) of the user's month or year of AI coding from their local Claude Code, Codex, Gemini CLI and OpenCode history, 100% local. Also shows what history rewynd has saved and explains Claude Code's 30-day deletion. Use when the user asks for their rewynd, an AI coding recap, month/year in review, a "wrapped" for coding agents, or rewynd status/setup.
-argument-hint: "[card | status | setup] [YYYY-MM | --year YYYY] [--github]"
+description: Make a "tape rewind meets terminal" recap video (or one share image, or a carousel of images) of the user's month or year of AI coding from their local Claude Code, Codex, Gemini CLI and OpenCode history, 100% local. Also shows what history rewynd has saved and explains Claude Code's 30-day deletion. Use when the user asks for their rewynd, an AI coding recap, month/year in review, a "wrapped" for coding agents, or rewynd status/setup.
+argument-hint: "[card | carousel | status | setup] [YYYY-MM | --year YYYY] [--github]"
 ---
 
 # /rewynd — your month of AI coding, as a video
@@ -16,6 +16,7 @@ Pick the mode from the user's words or the first argument (`$ARGUMENTS`):
 |---|---|---|
 | **video** (default) | "make my rewynd", a month, `--year`... | Steps 1–8 below |
 | **card** | `card`, "just an image / screenshot" | Steps 1–6, then step 7 with `render --card` (a PNG instead of a video) |
+| **carousel** | `carousel`, "Instagram / X carousel", "one image per slide" | Steps 1–6, then step 7 with `render --carousel` (one PNG per scene, in video order) |
 | **status** | `status`, "what's saved?", "is my history safe?" | [Status](#status-mode) |
 | **setup** | `setup`, first install, "how do I keep my whole year?" | [Setup](#setup-mode) |
 
@@ -110,6 +111,7 @@ Run `render` (add `--format wide|both` only if they want to override the saved f
 - The **first** render installs the video template's dependencies and a headless browser (one-time download, about 1–2 minutes). Say so before you start. After that it works offline.
 - If the result has `storyErrors`, go back to step 5.
 - Report the file path(s) from `files`. On macOS offer to open it (`open "<file>"`).
+- With `--carousel`, `files` lists every slide: report the folder instead (`output/carousel-<period>/`, plus `carousel-<period>-wide/` for wide), with slides named `01-intro.png`, `02-hours.png`… in posting order. On macOS offer `open "<folder>"`.
 
 ### 8. Wrap up (2 lines)
 - Where the video is, and that it's made to post (the footer links back to rewynd).

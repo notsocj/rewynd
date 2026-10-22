@@ -1,8 +1,9 @@
 // Lists every composition this template can render. Remotion Studio shows
 // them in its sidebar, and `npx remotion render/still <id>` picks one by id.
 //
-// The two real ones are `Rewynd` (the video) and `RewyndCard` (the share
-// image). scripts/render.ts renders them with --props=output/props.json.
+// The real ones are `Rewynd` (the video), `RewyndCard` (the share image) and
+// `RewyndScene` (one carousel slide). scripts/render.ts renders them with
+// --props=output/props.json (plus a `scene` for the slides).
 // Their default props are the fake October fixture, so Studio has something
 // to show; real renders always pass their own props.
 //
@@ -14,10 +15,19 @@ import { Composition, Folder, Still } from "remotion";
 import { SCENE_ORDER } from "../../contract/recap";
 import { edgeProps, edgeWideProps } from "./fixtures/edge";
 import { octoberProps } from "./fixtures/october";
-import { calculateCardMetadata, calculateRecapMetadata, calculateSingleMetadata, Rewynd, RewyndCard, SingleScene } from "./Rewynd";
+import {
+  calculateCardMetadata,
+  calculateRecapMetadata,
+  calculateSingleMetadata,
+  calculateSlideMetadata,
+  Rewynd,
+  RewyndCard,
+  RewyndScene,
+  SingleScene,
+} from "./Rewynd";
 import { Compare } from "./scenes/Compare";
 import { FPS } from "./scenes/registry";
-import { compareSchema, recapSchema, singleSceneSchema } from "./schema";
+import { compareSchema, recapSchema, rewyndSceneSchema, singleSceneSchema } from "./schema";
 // Importing this file starts loading the fonts before anything renders.
 import "./fonts";
 
@@ -47,6 +57,19 @@ export const RemotionRoot: React.FC = () => {
         width={1080}
         height={1920}
         defaultProps={octoberProps}
+      />
+      {/* A one-frame Composition, not a <Still>: a Still runs at 1 fps, and
+          the slides should match the video's 30 fps frame exactly. */}
+      <Composition
+        id="RewyndScene"
+        component={RewyndScene}
+        schema={rewyndSceneSchema}
+        calculateMetadata={calculateSlideMetadata}
+        durationInFrames={1}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        defaultProps={{ ...octoberProps, scene: "hours" as const }}
       />
 
       <Folder name="Samples">

@@ -10,7 +10,8 @@
 //   story-check                                         validate output/story.json against stats.json
 //   themes                                              list video themes (for the design question)
 //   prefs    [--set '<json>']                           show / update data/preferences.json
-//   render   [--card] [--format vertical|wide|both]     render the video (or one image)
+//   render   [--card | --carousel] [--format vertical|wide|both]
+//                                                       render the video (or one image, or one per scene)
 //   migrate-data --from <dir>                           copy saved days from an older install
 //   guard                                               check that data/ isn't tracked by git
 //

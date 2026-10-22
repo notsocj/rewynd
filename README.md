@@ -53,12 +53,13 @@ The story part needs an agent to write `output/story.json`; see [skills/rewynd/S
 
 ## Commands
 
-It's one skill with four modes:
+It's one skill with five modes:
 
 | Say | What it does |
 |---|---|
 | `/rewynd` | Pick a month (or year) → save new days → your agent writes your story → you pick a look → render the video |
 | `/rewynd card` | Same, but one shareable image instead of a video |
+| `/rewynd carousel` | Same, but one image per scene (`01-intro.png`, `02-hours.png`…) for an Instagram or X carousel |
 | `/rewynd status` | What's saved, what's still on disk, and when Claude Code will delete your oldest transcript |
 | `/rewynd setup` | Optional. Explains the 30-day deletion and saves your first days. Changes no settings |
 
