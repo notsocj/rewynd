@@ -1,0 +1,216 @@
+// =============================================================================
+// render/render.ts — stage 3: stats.json + story.json + design prefs → video.
+//
+//   1. validate story.json against stats.json (no invented numbers)
+//   2. resolve the theme ("auto" → the theme mapped to your personality)
+//   3. pick the scenes that have something to show (e.g. "Your main AI" needs
+//      2+ agents, "What you shipped" needs commits)
+//   4. hide project names if you asked to (Project A / B / C)
+//   5. write output/props.json and call the pre-built Remotion template
+//
+// Claude never writes Remotion code at this stage: the template in video/ is
+// fixed and only receives props. That keeps every run cheap and consistent.
+// =============================================================================
+
+import fs from "node:fs";
+import path from "node:path";
+import { spawnSync } from "node:child_process";
+import {
+  DEFAULT_PREFS,
+  REPO_URL,
+  SCENE_ORDER,
+  type DesignPrefs,
+  type RecapProps,
+  type SceneId,
+  type Stats,
+  type Story,
+} from "../../contract/recap.ts";
+import { VIDEO_DIR, exists, outputDir } from "../lib/paths.ts";
+import { readJsonFile, writeJsonAtomic } from "../lib/files.ts";
+import { info } from "../lib/log.ts";
+import { periodSlug } from "../stats/period.ts";
+import { validateStory } from "../story/validate-story.ts";
+import { loadPrefs } from "./prefs.ts";
+
+/** Composition ids registered in video/src/Root.tsx. */
+export const VIDEO_COMPOSITION = "Rewynd";
+export const CARD_COMPOSITION = "RewyndCard";
+
+export type RenderOptions = { card: boolean; format?: DesignPrefs["format"] };
+export type RenderResult = { files: string[]; props: string; scenes: SceneId[]; theme: string };
+
+// -----------------------------------------------------------------------------
+// Themes (owned by the video template: video/src/themes.json)
+// -----------------------------------------------------------------------------
+
+export type ThemeInfo = { id: string; label: string; description?: string };
+
+/** Read the theme list + personality→theme map, tolerating either JSON layout. */
+export function loadThemes(): { themes: ThemeInfo[]; byPersonality: Record<string, string> } {
+  const raw = readJsonFile<any>(path.join(VIDEO_DIR, "src", "themes.json"), null);
+  const list: any[] = Array.isArray(raw) ? raw : Array.isArray(raw?.themes) ? raw.themes : [];
+  const themes = list.filter((t) => t && typeof t.id === "string").map((t) => ({ id: t.id, label: t.label ?? t.id, description: t.description }));
+  const map = raw?.byPersonality ?? raw?.personalityThemes ?? raw?.personality ?? raw?.auto ?? {};
+  return { themes, byPersonality: typeof map === "object" && map ? map : {} };
+}
+
+function resolveTheme(prefs: DesignPrefs, story: Story): string {
+  const { themes, byPersonality } = loadThemes();
+  if (prefs.theme !== "auto" && themes.some((t) => t.id === prefs.theme)) return prefs.theme;
+  return byPersonality[story.personality.id] ?? themes[0]?.id ?? "default";
+}
+
+// -----------------------------------------------------------------------------
+// Scenes
+// -----------------------------------------------------------------------------
+
+export function pickScenes(stats: Stats, story: Story): SceneId[] {
+  const has: Record<SceneId, boolean> = {
+    intro: true,
+    hours: stats.totals.activeMinutes > 0,
+    mainAI: stats.agents.length >= 2, // only interesting with 2+ agents
+    heatmap: stats.time.heatmap.length > 0,
+    peakHour: stats.time.busiestHour !== null,
+    projects: stats.projects.length > 0,
+    tools: stats.tools.length > 0,
+    shipped: !!stats.shipped && stats.shipped.commits > 0, // skipped in a month with no commits
+    funny: story.funnyLines.length > 0 || !!story.backgroundLine,
+    hardestBug: !!story.hardestBug,
+    personality: true,
+    outro: true,
+  };
+  return SCENE_ORDER.filter((s) => has[s]);
+}
+
+// -----------------------------------------------------------------------------
+// Hide project names
+// -----------------------------------------------------------------------------
+
+/** Replace every project/repo name with "Project A", "Project B"... everywhere it appears. */
+export function anonymize(stats: Stats, story: Story): { stats: Stats; story: Story } {
+  const s: Stats = structuredClone(stats);
+  const st: Story = structuredClone(story);
+  const names = [
+    ...s.projects.map((p) => p.name),
+    ...(s.shipped?.byRepo.map((r) => r.name) ?? []),
+    ...(s.longestSession ? [s.longestSession.project] : []),
+    ...st.projects.map((p) => p.name),
+    ...(st.hardestBug?.project ? [st.hardestBug.project] : []),
+  ];
+  const alias = new Map<string, string>();
+  for (const n of names) {
+    if (!alias.has(n)) alias.set(n, `Project ${letters(alias.size)}`);
+  }
+  const rename = (n: string) => alias.get(n) ?? n;
+  // Longest names first, so "lumen-web" is replaced before "lumen".
+  const ordered = [...alias.keys()].sort((a, b) => b.length - a.length);
+  const scrub = (text: string) =>
+    ordered.reduce((t, n) => t.replace(new RegExp(`\\b${n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "gi"), alias.get(n)!), text);
+
+  s.projects = s.projects.map((p) => ({ ...p, name: rename(p.name) }));
+  if (s.shipped) s.shipped.byRepo = s.shipped.byRepo.map((r) => ({ ...r, name: rename(r.name) }));
+  if (s.longestSession) s.longestSession.project = rename(s.longestSession.project);
+  st.projects = st.projects.map((p) => ({ name: rename(p.name), line: scrub(p.line) }));
+  if (st.hardestBug) st.hardestBug = { project: st.hardestBug.project ? rename(st.hardestBug.project) : null, line: scrub(st.hardestBug.line) };
+  st.captions = Object.fromEntries(Object.entries(st.captions).map(([k, v]) => [k, scrub(String(v))]));
+  st.funnyLines = st.funnyLines.map(scrub);
+  if (st.backgroundLine) st.backgroundLine = scrub(st.backgroundLine);
+  st.personality = { ...st.personality, line: scrub(st.personality.line) };
+  st.closing = scrub(st.closing);
+  return { stats: s, story: st };
+}
+
+const letters = (i: number): string => (i < 26 ? String.fromCharCode(65 + i) : letters(Math.floor(i / 26) - 1) + String.fromCharCode(65 + (i % 26)));
+
+// -----------------------------------------------------------------------------
+// Render
+// -----------------------------------------------------------------------------
+
+export function buildProps(opts: RenderOptions): { props: RecapProps; errors: string[] } {
+  const stats = readJsonFile<Stats | null>(path.join(outputDir(), "stats.json"), null);
+  if (!stats) throw new Error("output/stats.json is missing. Run `collect` first");
+  const story = readJsonFile<Story | null>(path.join(outputDir(), "story.json"), null);
+  if (!story) throw new Error("output/story.json is missing. Claude writes it in the /rewynd skill");
+  const check = validateStory(story, stats);
+  if (!check.ok) return { props: null as unknown as RecapProps, errors: check.errors };
+
+  const design = { ...DEFAULT_PREFS, ...(loadPrefs().design ?? {}) };
+  if (opts.format) design.format = opts.format;
+  design.theme = resolveTheme(design, story);
+
+  const { stats: s, story: st } = design.hideProjectNames ? anonymize(stats, story) : { stats, story };
+
+  return {
+    props: {
+      stats: s,
+      story: st,
+      prefs: design,
+      scenes: pickScenes(s, st),
+      repoUrl: REPO_URL,
+      customFontStaticPath: design.font.kind === "custom" ? stageAsset(design.font.file, "font") : null,
+      musicStaticPath: design.musicFile ? stageAsset(design.musicFile, "music") : null,
+    },
+    errors: [],
+  };
+}
+
+/**
+ * Copy a user file (custom font, music) into video/public/rewynd-user/ so the
+ * Remotion template can load it with staticFile(). Returns its public path,
+ * or null if the file can't be found (the template then falls back to Inter
+ * / silence).
+ */
+function stageAsset(file: string, kind: "font" | "music"): string | null {
+  if (!file || !exists(file)) {
+    info(`Your ${kind} file wasn't found (${file}); using the default instead`);
+    return null;
+  }
+  const dir = path.join(VIDEO_DIR, "public", "rewynd-user");
+  fs.mkdirSync(dir, { recursive: true });
+  const name = `${kind}${path.extname(file).toLowerCase()}`;
+  fs.copyFileSync(file, path.join(dir, name));
+  return `rewynd-user/${name}`;
+}
+
+/** Install the video template's dependencies on first render (one-time download). */
+export function ensureVideoDeps(): void {
+  if (exists(path.join(VIDEO_DIR, "node_modules", ".bin", "remotion"))) return;
+  info("First render: installing the video template's dependencies (one-time, needs internet)…");
+  const lock = exists(path.join(VIDEO_DIR, "package-lock.json"));
+  const r = spawnSync("npm", [lock ? "ci" : "install", "--no-audit", "--no-fund"], {
+    cwd: VIDEO_DIR,
+    stdio: ["ignore", 2, 2],
+    shell: process.platform === "win32",
+  });
+  if (r.status !== 0) throw new Error("couldn't install the video template's dependencies (npm failed, see above)");
+}
+
+export function render(opts: RenderOptions): RenderResult | { errors: string[] } {
+  const { props, errors } = buildProps(opts);
+  if (errors.length) return { errors };
+  ensureVideoDeps();
+
+  const slug = periodSlug(props.stats.period);
+  const formats: ("vertical" | "wide")[] = props.prefs.format === "both" ? ["vertical", "wide"] : [props.prefs.format];
+  const files: string[] = [];
+  let propsFile = "";
+  for (const format of formats) {
+    const p: RecapProps = { ...props, prefs: { ...props.prefs, format } };
+    propsFile = path.join(outputDir(), `props${formats.length > 1 ? `-${format}` : ""}.json`);
+    writeJsonAtomic(propsFile, p);
+    const suffix = format === "wide" ? "-wide" : "";
+    const out = path.join(outputDir(), opts.card ? `rewynd-card-${slug}${suffix}.png` : `rewynd-${slug}${suffix}.mp4`);
+    // Its own port, so a Remotion Studio left open on the default port
+    // (3000) can't make the render fail.
+    const port = `--port=${3100 + Math.floor(Math.random() * 800)}`;
+    const args = opts.card
+      ? ["still", "src/index.ts", CARD_COMPOSITION, out, `--props=${propsFile}`, port]
+      : ["render", "src/index.ts", VIDEO_COMPOSITION, out, `--props=${propsFile}`, port];
+    info(`Rendering ${path.basename(out)}…`);
+    const bin = path.join(VIDEO_DIR, "node_modules", ".bin", process.platform === "win32" ? "remotion.cmd" : "remotion");
+    const r = spawnSync(bin, args, { cwd: VIDEO_DIR, stdio: ["ignore", 2, 2], shell: process.platform === "win32" });
+    if (r.status !== 0) throw new Error(`Remotion failed to render ${path.basename(out)} (see the log above)`);
+    files.push(out);
+  }
+  return { files, props: propsFile, scenes: props.scenes, theme: props.prefs.theme };
+}

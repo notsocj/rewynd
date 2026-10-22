@@ -1,0 +1,19 @@
+{
+  // Type-checking only (`npm run typecheck`). We never compile: Node ≥ 22.18
+  // runs our .ts files directly by stripping the types. That's why imports
+  // keep their ".ts" extension and why only "erasable" TypeScript is allowed
+  // (no enums, no namespaces, no constructor parameter properties).
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": ["scripts", "contract", "test"]
+}

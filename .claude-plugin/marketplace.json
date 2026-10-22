@@ -1,0 +1,12 @@
+{
+  "name": "rewynd",
+  "description": "rewynd: your month of AI coding, as a video",
+  "owner": { "name": "notsocj" },
+  "plugins": [
+    {
+      "name": "rewynd",
+      "source": "./",
+      "description": "Recap video of your AI coding (Claude Code, Codex, Gemini CLI, OpenCode). 100% local."
+    }
+  ]
+}

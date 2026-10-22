@@ -1,0 +1,36 @@
+{
+  "default": "night",
+  "themes": [
+    {
+      "id": "night",
+      "label": "Night",
+      "description": "Black tape, off-white text, green numbers. A tape playing in a dark room."
+    },
+    {
+      "id": "bluescreen",
+      "label": "Blue screen",
+      "description": "The bright blue a VCR shows with no signal, white on-screen text, amber numbers."
+    },
+    {
+      "id": "midnight",
+      "label": "Midnight",
+      "description": "Black tape with lilac numbers. Made for late-night coders."
+    },
+    {
+      "id": "label",
+      "label": "Tape label",
+      "description": "Off-white like a paper tape label, black text, red numbers. The light option."
+    }
+  ],
+  "personalityThemes": {
+    "3am-shipper": "midnight",
+    "rewriter": "bluescreen",
+    "polite-one": "label",
+    "speedrunner": "bluescreen",
+    "bug-whisperer": "night",
+    "architect": "label",
+    "juggler": "bluescreen",
+    "marathoner": "night",
+    "weekend-warrior": "label"
+  }
+}

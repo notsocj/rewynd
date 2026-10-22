@@ -1,0 +1,21 @@
+{
+  "name": "rewynd",
+  "version": "0.1.0",
+  "description": "Your month (and year) of AI coding, as a video. Reads your local Claude Code, Codex, Gemini CLI and OpenCode history, 100% on your machine.",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "rewynd": "node --disable-warning=ExperimentalWarning scripts/cli.ts",
+    "test": "node --disable-warning=ExperimentalWarning --test \"test/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "check": "npm run typecheck && npm test"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  }
+}
