@@ -114,6 +114,42 @@ export const RemotionRoot: React.FC = () => {
         ))}
       </Folder>
 
+      {/* Every scene in every card template, vertical, for design review. */}
+      <Folder name="Templates">
+        {(["tape", "terminal", "receipt", "arcade"] as const).map((template) =>
+          SCENE_ORDER.map((scene) => (
+            <Composition
+              key={`${template}-${scene}`}
+              id={`T-${template}-${scene}`}
+              component={SingleScene}
+              schema={singleSceneSchema}
+              calculateMetadata={calculateSingleMetadata}
+              durationInFrames={120}
+              fps={FPS}
+              width={1080}
+              height={1920}
+              defaultProps={{ recap: { ...octoberProps, prefs: { ...octoberProps.prefs, theme: template, accent: null } }, scene }}
+            />
+          )),
+        )}
+        {(["tape", "terminal", "receipt", "arcade"] as const).map((template) =>
+          SCENE_ORDER.map((scene) => (
+            <Composition
+              key={`${template}-${scene}-wide`}
+              id={`T-${template}-${scene}-wide`}
+              component={SingleScene}
+              schema={singleSceneSchema}
+              calculateMetadata={calculateSingleMetadata}
+              durationInFrames={120}
+              fps={FPS}
+              width={1920}
+              height={1080}
+              defaultProps={{ recap: { ...octoberWide, prefs: { ...octoberWide.prefs, theme: template, accent: null } }, scene }}
+            />
+          )),
+        )}
+      </Folder>
+
       <Folder name="Dev">
         {/* Side-by-side stills for design reviews (images in public/compare/). */}
         <Composition

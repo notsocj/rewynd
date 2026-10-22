@@ -27,6 +27,20 @@ type Props = {
   cursor?: boolean;
 };
 
+/** How a template paints its giant numbers (the "hero" style). */
+export const heroLook = (theme: ReturnType<typeof useRecap>["theme"], s: number) => {
+  switch (theme.template) {
+    case "terminal": // plain output color; the unit carries the accent
+      return { color: theme.fg, shadow: "none", unitColor: theme.accent, unitScale: 0.38, unitFont: "hero" as const, cursor: false };
+    case "receipt": // printed ink
+      return { color: theme.fg, shadow: "none", unitColor: theme.fg, unitScale: 0.22, unitFont: "ui" as const, cursor: false };
+    case "arcade": // accent with a hard magenta drop shadow
+      return { color: theme.accent, shadow: `${16 * s}px ${16 * s}px 0 ${theme.pink}`, unitColor: theme.cyan, unitScale: 0.16, unitFont: "ui" as const, cursor: false };
+    default: // tape: cream number, the unit in VT323 in the accent color
+      return { color: theme.fg, shadow: theme.osdShadow, unitColor: theme.accent, unitScale: 0.3, unitFont: "ui" as const, cursor: false };
+  }
+};
+
 export const Hero: React.FC<Props> = ({
   value,
   unit,
@@ -38,26 +52,38 @@ export const Hero: React.FC<Props> = ({
 }) => {
   const { theme, font, s } = useRecap();
   const width = useSlotWidth();
+  const look = heroLook(theme, s);
   const size = heroFontSize(value, font, width * share, maxSize * s);
+  const showCursor = cursor && look.cursor;
 
   return (
-    <div style={{ display: "flex", alignItems: "baseline", gap: tightUnit ? 0 : 24 * s, whiteSpace: "nowrap" }}>
-      <CountUp value={value} font={font} fontSize={size} color={theme.accent} textShadow={theme.osdShadow} delay={delay} />
-      {unit || cursor ? (
+    <div
+      style={{
+        display: "flex",
+        // The arcade template centers everything, like a cabinet screen.
+        justifyContent: theme.template === "arcade" ? "center" : "flex-start",
+        alignItems: "baseline",
+        gap: tightUnit ? 0 : 24 * s,
+        whiteSpace: "nowrap",
+      }}
+    >
+      <CountUp value={value} font={font} fontSize={size} color={look.color} textShadow={look.shadow} delay={delay} lineHeight={theme.template === "arcade" ? 1.1 : 0.8} />
+      {unit || showCursor ? (
         <Appear delay={delay + 10} distance={0}>
           <span
             style={{
-              fontSize: size * (tightUnit ? 0.6 : 0.26),
-              fontWeight: font.black,
+              fontFamily: look.unitFont === "hero" ? font.hero : font.ui,
+              fontSize: size * (tightUnit ? Math.max(look.unitScale, 0.5) : look.unitScale),
+              fontWeight: look.unitFont === "hero" ? font.black : 400,
               letterSpacing: "-0.02em",
-              color: tightUnit ? theme.accent : theme.fg,
-              textShadow: theme.osdShadow,
+              color: look.unitColor,
+              textTransform: theme.template === "tape" || theme.template === "arcade" ? "uppercase" : undefined,
             }}
           >
             {unit}
             {/* The cursor waits after the output, like a terminal ready for
                 the next command. */}
-            {cursor ? (
+            {showCursor ? (
               <span style={{ marginLeft: "0.25em", fontSize: tightUnit ? "0.43em" : undefined }}>
                 <Cursor color={theme.accent} />
               </span>
@@ -84,17 +110,21 @@ export const HeroText: React.FC<{
   // ~0.6em per character for Inter Black; the slot width decides the rest.
   // Never below minSize: a very long name stays big and truncates with "…"
   // instead of shrinking to an unreadable size.
-  const size = Math.max(minSize * s, Math.min(maxSize * s, (width * share) / Math.max(1, text.length * 0.6)));
+  // Per-character width depends on the template's hero font (pixel fonts are square).
+  const perChar = theme.template === "arcade" ? 1 : theme.template === "terminal" || theme.template === "receipt" ? 0.62 : 0.6;
+  const size = Math.max(minSize * s, Math.min(maxSize * s, (width * share) / Math.max(1, text.length * perChar)));
+  const look = heroLook(theme, s);
   return (
     <Appear delay={delay} distance={30}>
       <div
         style={{
+          fontFamily: font.hero,
           fontSize: size,
           fontWeight: font.black,
           letterSpacing: font.heroTracking,
           lineHeight: 0.9,
-          color: color ?? theme.accent,
-          textShadow: theme.osdShadow,
+          color: color ?? (theme.template === "tape" ? theme.accent : look.color),
+          textShadow: look.shadow,
           fontVariantNumeric: "tabular-nums",
           whiteSpace: "nowrap",
           overflow: "hidden",

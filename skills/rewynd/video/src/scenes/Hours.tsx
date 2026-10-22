@@ -7,6 +7,7 @@ import { countProgress } from "../components/CountUp";
 import { num, plural } from "../components/format";
 import { Caption, Hero } from "../components/Hero";
 import { useRecap } from "../recap/context";
+import { DESIGNS } from "../templates/designs";
 import { Stage, useSlotWidth } from "../tape/Stage";
 import { TapeCard } from "../tape/TapeCard";
 import { TapeTimeline } from "../tape/TapeTimeline";
@@ -26,8 +27,10 @@ const Timeline: React.FC = () => {
 export const Hours: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const { props, s } = useRecap();
+  const { props, s, theme, wide } = useRecap();
   const { totals, period } = props.stats;
+  // Vertical videos use the template's hand-designed card (templates/designs).
+  const Designed = DESIGNS[theme.template].hours;
   const minutes = Math.max(0, Math.round(totals.activeMinutes));
   const hours = Math.floor(minutes / 60);
 
@@ -41,6 +44,7 @@ export const Hours: React.FC = () => {
   const days = (minutes / 60 / 24).toFixed(1);
   const caption = props.story.captions.hours ?? `That's ${days} days of pair programming.`;
 
+  if (!wide) return <Designed />;
   return (
     <TapeCard counter={counter}>
       <Stage
@@ -49,7 +53,7 @@ export const Hours: React.FC = () => {
         primaryShare={0.5}
         primary={
           <div style={{ display: "flex", flexDirection: "column", gap: 40 * s }}>
-            <TypedPrompt command={`rewynd hours --${period.kind}`} fontSize={42 * s} delay={4} />
+            {theme.template === "tape" ? <TypedPrompt command={`rewynd hours --${period.kind}`} fontSize={42 * s} delay={4} /> : null}
             <Hero value={hours} unit="hrs" delay={COUNT_DELAY} />
             <div style={{ display: "flex", flexDirection: "column", gap: 12 * s }}>
               <Caption delay={30}>{caption}</Caption>

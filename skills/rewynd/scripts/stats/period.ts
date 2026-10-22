@@ -30,5 +30,16 @@ export function parsePeriod(opts: { month?: string; year?: string }): Period {
   };
 }
 
+/** The period right before `p` (last month / last year), or null for custom ranges. */
+export function previousPeriod(p: Period): Period | null {
+  if (p.kind === "year") return parsePeriod({ year: String(Number(p.from.slice(0, 4)) - 1) });
+  if (p.kind === "month") {
+    const y = Number(p.from.slice(0, 4));
+    const m = Number(p.from.slice(5, 7));
+    return parsePeriod({ month: m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}` });
+  }
+  return null;
+}
+
 /** Short slug for output file names: "2026-10" or "2026". */
 export const periodSlug = (p: Period): string => (p.kind === "month" ? p.from.slice(0, 7) : p.kind === "year" ? p.from.slice(0, 4) : `${p.from}_${p.to}`);

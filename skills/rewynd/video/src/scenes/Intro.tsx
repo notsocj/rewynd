@@ -10,7 +10,7 @@ import { Caption } from "../components/Hero";
 import { useRecap } from "../recap/context";
 import { Stage } from "../tape/Stage";
 import { TapeCard } from "../tape/TapeCard";
-import { TapeLabel } from "../tape/TapeLabel";
+import { Heading } from "../templates/Heading";
 import { TypedPrompt } from "../tape/Terminal";
 
 export const Intro: React.FC = () => {
@@ -29,7 +29,7 @@ export const Intro: React.FC = () => {
           // alignItems flex-start keeps the tape label sticker its natural width
           // instead of stretching across the column.
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 56 * s }}>
-            <TapeLabel title={stats.period.tapeLabel} subtitle={`TAPE ${tapeNumber("intro")} · REWYND`} size={1.1} />
+            <Heading scene="intro" size={1.1} />
             <div
                 style={{
                   fontSize: 132 * s,

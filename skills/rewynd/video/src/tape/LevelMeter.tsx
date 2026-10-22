@@ -17,6 +17,9 @@ import { CLAMP, EASE_OUT } from "../components/motion";
 
 type Props = {
   value: number; // 0..1, share of the top item
+  // "segments": LED segments (tape). "solid": one continuous bar (terminal).
+  // "blocks": chunky square pixels (arcade).
+  variant?: "segments" | "solid" | "blocks";
   segments?: number;
   width: number;
   height?: number;
@@ -28,6 +31,7 @@ type Props = {
 };
 
 export const LevelMeter: React.FC<Props> = ({
+  variant = "segments",
   value,
   segments = 24,
   width,
@@ -57,15 +61,27 @@ export const LevelMeter: React.FC<Props> = ({
   // The top 15% of the meter is the "hot" zone.
   const hotFrom = Math.round(segments * 0.85);
 
+  if (variant === "solid") {
+    // One bar: fills with the same ease-out, then breathes by a hair (never
+    // past the real value) instead of flickering segment by segment.
+    const fill = interpolate(frame, [delay, fillEnd], [0, value], { ...CLAMP, easing: EASE_OUT });
+    const breathe = frame > fillEnd ? 1 - 0.015 * (1 + Math.sin(frame / 4)) : 1;
+    return (
+      <div style={{ width, height, background: offColor, borderRadius: 6, overflow: "hidden" }}>
+        <div style={{ width: "100%", height: "100%", background: onColor, scale: `${fill * breathe} 1`, transformOrigin: "left center" }} />
+      </div>
+    );
+  }
+
   return (
-    <div style={{ display: "flex", gap, width }}>
+    <div style={{ display: "flex", gap: variant === "blocks" ? 8 : gap, width }}>
       {Array.from({ length: segments }, (_, i) => (
         <div
           key={i}
           style={{
             width: segWidth,
             height,
-            borderRadius: 3,
+            borderRadius: variant === "blocks" ? 0 : 3,
             // The peak-hold segment stays lit at the real level.
             background: i < lit || (frame > fillEnd && i === target - 1) ? (i >= hotFrom ? hotColor : onColor) : offColor,
           }}

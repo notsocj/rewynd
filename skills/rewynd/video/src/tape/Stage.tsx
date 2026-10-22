@@ -17,9 +17,9 @@ import React, { createContext, useContext } from "react";
 import { useVideoConfig } from "remotion";
 import type { SceneId } from "../../../contract/recap";
 import { useRecap } from "../recap/context";
+import { Heading } from "../templates/Heading";
+import { useContentRect } from "../templates/frame";
 import { FitBox } from "./FitBox";
-import { frameFor } from "./layout";
-import { TapeLabel } from "./TapeLabel";
 
 const SlotWidth = createContext(888);
 
@@ -44,31 +44,23 @@ const WIDE_GAP = 80;
 
 export const Stage: React.FC<Props> = ({ scene, tapeSubtitle, primary, secondary, primaryShare = 0.44, center }) => {
   const { width } = useVideoConfig();
-  const { wide, s, props, tapeNumber } = useRecap();
-  const f = frameFor(wide);
-  const full = width - f.side * 2;
+  const { wide, s } = useRecap();
+  // The free area inside the current template's frame (see templates/frame.ts).
+  const r = useContentRect();
+  const full = width - r.left - r.right;
 
-  const label = tapeSubtitle ? (
-    <TapeLabel title={props.stats.period.tapeLabel} subtitle={`TAPE ${tapeNumber(scene)} · ${tapeSubtitle}`} size={0.82} />
-  ) : null;
+  // The scene heading, in the template's voice (tape label, $ command...).
+  const label = tapeSubtitle ? <Heading scene={scene} /> : null;
 
   if (!wide) {
     return (
-      <div
-        style={{
-          position: "absolute",
-          left: f.side,
-          width: full,
-          top: f.contentTop + 30,
-          bottom: 1920 - f.contentBottom,
-        }}
-      >
+      <div style={{ position: "absolute", left: r.left, width: full, top: r.top, bottom: r.bottom, textAlign: r.align }}>
         <FitBox align={center ? "center" : "top"}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 44 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 44, alignItems: r.align === "center" ? "center" : "stretch" }}>
             {label ? <div>{label}</div> : null}
             <SlotWidth.Provider value={full}>
-              <div>{primary}</div>
-              {secondary ? <div>{secondary}</div> : null}
+              <div style={{ alignSelf: "stretch" }}>{primary}</div>
+              {secondary ? <div style={{ alignSelf: "stretch" }}>{secondary}</div> : null}
             </SlotWidth.Provider>
           </div>
         </FitBox>
@@ -84,13 +76,14 @@ export const Stage: React.FC<Props> = ({ scene, tapeSubtitle, primary, secondary
     <div
       style={{
         position: "absolute",
-        left: f.side,
+        left: r.left,
         width: full,
-        top: f.contentTop,
-        bottom: 1080 - f.contentBottom,
+        top: r.top,
+        bottom: r.bottom,
         display: "flex",
         gap: WIDE_GAP,
         alignItems: "center",
+        textAlign: r.align,
       }}
     >
       <div style={{ width: leftWidth, height: "100%" }}>

@@ -28,6 +28,8 @@ import { rankPersonalities } from "./personality.ts";
 export type BuildInput = {
   period: Period;
   days: Map<string, DayRecord>;
+  /** Saved days of the period before (last month / year), for "vs September". */
+  previous?: { period: Period; days: Map<string, DayRecord> } | null;
   coverage: Coverage;
   skippedAgents: Stats["skippedAgents"];
   /** True when this run fetched GitHub numbers (--github). */
@@ -36,7 +38,7 @@ export type BuildInput = {
 
 const zeroTotals = (): AgentTotals => ({ sessions: 0, userMessages: 0, toolCalls: 0, tokensIn: 0, tokensOut: 0, activeMinutes: 0 });
 
-export function buildStats({ period, days, coverage, skippedAgents, includeGithub }: BuildInput): Stats {
+export function buildStats({ period, days, coverage, skippedAgents, includeGithub, previous }: BuildInput): Stats {
   // A month in progress ends "today" for coverage and heatmap purposes:
   // tomorrow isn't a gap, it just hasn't happened yet.
   const lastDay = period.to < today() ? period.to : today();
@@ -216,8 +218,32 @@ export function buildStats({ period, days, coverage, skippedAgents, includeGithu
     phrases,
     longestSession: longest,
     shipped: buildShipped(inPeriod, includeGithub),
+    previous: buildPrevious(previous ?? null, totals.activeMinutes),
   };
   return { ...base, personalityHints: rankPersonalities(base) };
+}
+
+/**
+ * Last period's totals, for "vs September +21%". Only from SAVED days: if
+ * rewynd never saw last month, there's no comparison (null), never a guess.
+ */
+function buildPrevious(prev: BuildInput["previous"] | null, currentMinutes: number): Stats["previous"] {
+  if (!prev || prev.days.size === 0) return null;
+  let minutes = 0;
+  let sessions = 0;
+  for (const d of prev.days.values()) {
+    minutes += d.activeMinutes;
+    for (const a of Object.values(d.agents)) sessions += a?.sessions ?? 0;
+  }
+  if (minutes === 0) return null;
+  const p = prev.period;
+  return {
+    label: p.label,
+    shortLabel: p.kind === "month" ? p.label.slice(0, 3).toUpperCase() : p.label,
+    activeMinutes: minutes,
+    sessions,
+    changePct: Math.round(((currentMinutes - minutes) / minutes) * 100),
+  };
 }
 
 function buildShipped(days: DayRecord[], includeGithub: boolean): Shipped | null {

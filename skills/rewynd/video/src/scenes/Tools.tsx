@@ -8,6 +8,7 @@ import { TOOL_LABELS } from "../../../contract/recap";
 import { num } from "../components/format";
 import { Caption } from "../components/Hero";
 import { useRecap } from "../recap/context";
+import { DESIGNS } from "../templates/designs";
 import { Stage, useSlotWidth } from "../tape/Stage";
 import { TapeCard } from "../tape/TapeCard";
 import { terminalInner, TermList } from "../tape/TermList";
@@ -35,12 +36,15 @@ const List: React.FC = () => {
 };
 
 export const Tools: React.FC = () => {
-  const { props, font, theme, s } = useRecap();
+  const { props, font, theme, s, wide } = useRecap();
+  // Vertical videos use the template's hand-designed card (templates/designs).
+  const Designed = DESIGNS[theme.template].tools;
   const total = props.stats.totals.toolCalls;
   const top = props.stats.tools[0];
   const caption =
     props.story.captions.tools ?? (top ? `Mostly: ${(TOOL_LABELS[top.category] ?? top.label).toLowerCase()}.` : "No tool breakdown on this tape.");
 
+  if (!wide) return <Designed />;
   return (
     <TapeCard>
       <Stage

@@ -1,36 +1,56 @@
 {
-  "default": "night",
+  "default": "tape",
   "themes": [
     {
-      "id": "night",
-      "label": "Night",
-      "description": "Black tape, off-white text, green numbers. A tape playing in a dark room."
+      "id": "tape",
+      "label": "Tape",
+      "description": "A camcorder tape: REC light, timecode, chunky numbers and a handwritten tape label.",
+      "accents": [
+        { "id": "red", "label": "REC red", "color": "#FF3B30" },
+        { "id": "amber", "label": "Amber", "color": "#FFB020" },
+        { "id": "mint", "label": "Mint", "color": "#7CF0B4" }
+      ]
     },
     {
-      "id": "bluescreen",
-      "label": "Blue screen",
-      "description": "The bright blue a VCR shows with no signal, white on-screen text, amber numbers."
+      "id": "terminal",
+      "label": "Terminal",
+      "description": "Your month as terminal output: a dark window, monospace type, diff-colored lines.",
+      "accents": [
+        { "id": "green", "label": "Green", "color": "#56D364" },
+        { "id": "amber", "label": "Amber", "color": "#E3B341" },
+        { "id": "blue", "label": "Blue", "color": "#79C0FF" }
+      ]
     },
     {
-      "id": "midnight",
-      "label": "Midnight",
-      "description": "Black tape with lilac numbers. Made for late-night coders."
+      "id": "receipt",
+      "label": "Receipt",
+      "description": "A printed receipt on a bright color: itemized stats, a barcode and a rubber stamp.",
+      "accents": [
+        { "id": "orange", "label": "Orange", "color": "#FF6A3D" },
+        { "id": "blue", "label": "Periwinkle", "color": "#7C9CFF" },
+        { "id": "yellow", "label": "Yellow", "color": "#FFD23F" }
+      ]
     },
     {
-      "id": "label",
-      "label": "Tape label",
-      "description": "Off-white like a paper tape label, black text, red numbers. The light option."
+      "id": "arcade",
+      "label": "Arcade",
+      "description": "An 8-bit arcade screen: pixel font, high-score table and a character select.",
+      "accents": [
+        { "id": "yellow", "label": "Yellow", "color": "#FFE14D" },
+        { "id": "cyan", "label": "Cyan", "color": "#5CF2FF" },
+        { "id": "green", "label": "Green", "color": "#7CF08A" }
+      ]
     }
   ],
   "personalityThemes": {
-    "3am-shipper": "midnight",
-    "rewriter": "bluescreen",
-    "polite-one": "label",
-    "speedrunner": "bluescreen",
-    "bug-whisperer": "night",
-    "architect": "label",
-    "juggler": "bluescreen",
-    "marathoner": "night",
-    "weekend-warrior": "label"
+    "3am-shipper": { "theme": "tape", "accent": "mint" },
+    "rewriter": { "theme": "terminal", "accent": "green" },
+    "polite-one": { "theme": "receipt", "accent": "yellow" },
+    "speedrunner": { "theme": "arcade", "accent": "cyan" },
+    "bug-whisperer": { "theme": "terminal", "accent": "amber" },
+    "architect": { "theme": "receipt", "accent": "blue" },
+    "juggler": { "theme": "arcade", "accent": "yellow" },
+    "marathoner": { "theme": "tape", "accent": "amber" },
+    "weekend-warrior": { "theme": "receipt", "accent": "orange" }
   }
 }

@@ -198,6 +198,18 @@ export type Stats = {
   personalityHints: { id: PersonalityId; score: number; reason: string }[];
   /** null when git found no repos / no commits in the period. */
   shipped: Shipped | null;
+  /**
+   * The period before this one (last month / last year), from saved days,
+   * for "vs September +21%". null when nothing was saved for it.
+   */
+  previous: {
+    label: string; // "September 2026"
+    shortLabel: string; // "SEP" (or "2025" for a year)
+    activeMinutes: number;
+    sessions: number;
+    /** Change in active minutes vs that period, in whole percent (e.g. 21 or -8). */
+    changePct: number;
+  } | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -262,8 +274,14 @@ export type Story = {
 // ---------------------------------------------------------------------------
 
 export type DesignPrefs = {
-  /** A theme id from video/src/themes.json, or "auto" (picked from the personality). */
+  /**
+   * A TEMPLATE id from video/src/themes.json ("tape", "terminal", "receipt",
+   * "arcade"), or "auto" (picked from the personality). Old v0.1 color-theme
+   * ids ("night", "bluescreen"...) still work: they map onto templates.
+   */
   theme: string;
+  /** One of the template's accent ids (themes.json), or null for its default. */
+  accent: string | null;
   font: { kind: "inter" } | { kind: "custom"; file: string };
   format: "vertical" | "wide" | "both";
   /** Replace project/repo names with "Project A/B/C" in the video. */
@@ -274,6 +292,7 @@ export type DesignPrefs = {
 
 export const DEFAULT_PREFS: DesignPrefs = {
   theme: "auto",
+  accent: null,
   font: { kind: "inter" },
   format: "vertical",
   hideProjectNames: false,

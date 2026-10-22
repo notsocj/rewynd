@@ -37,7 +37,9 @@ export function updatePrefs(patch: { design?: Partial<DesignPrefs>; gitEmails?: 
 
 /** Reject impossible values early with a message the skill can relay. */
 export function validateDesign(d: DesignPrefs): DesignPrefs {
-  if (typeof d.theme !== "string" || !d.theme) throw new Error("design.theme must be a theme id or \"auto\"");
+  if (typeof d.theme !== "string" || !d.theme) throw new Error("design.theme must be a template id (tape, terminal, receipt, arcade) or \"auto\"");
+  if (d.accent !== null && d.accent !== undefined && typeof d.accent !== "string") throw new Error("design.accent must be an accent id from `themes`, or null");
+  d.accent = d.accent ?? null;
   if (!["vertical", "wide", "both"].includes(d.format)) throw new Error("design.format must be vertical, wide or both");
   if (d.font?.kind !== "inter" && !(d.font?.kind === "custom" && typeof (d.font as any).file === "string")) {
     throw new Error('design.font must be {"kind":"inter"} or {"kind":"custom","file":"/path/to/font.ttf"}');

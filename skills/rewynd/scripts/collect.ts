@@ -30,6 +30,7 @@ import { addCoverage, loadCoverage } from "./store/coverage.ts";
 import { collectShipped, type RepoActivity } from "./shipped/collect-shipped.ts";
 import { collectGithub } from "./shipped/github.ts";
 import { buildStats } from "./stats/build-stats.ts";
+import { previousPeriod } from "./stats/period.ts";
 import { SamplePicker } from "./samples/pick-samples.ts";
 import { loadPrefs } from "./render/prefs.ts";
 
@@ -156,9 +157,11 @@ export async function collect(opts: CollectOptions): Promise<CollectResult> {
     .filter((a) => (a.found && (!a.supported || a.error)) || (!a.found && a.note && /installed|exists/.test(a.note)))
     .map((a) => ({ id: a.id, reason: a.error ? `couldn't be read (${a.error})` : a.note ?? "not supported yet" }));
 
+  const prev = previousPeriod(opts.period);
   const stats = buildStats({
     period: opts.period,
     days: loadDays(opts.period.from, opts.period.to),
+    previous: prev ? { period: prev, days: loadDays(prev.from, prev.to) } : null,
     coverage: loadCoverage(),
     skippedAgents,
     includeGithub: github.ok,

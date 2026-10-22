@@ -107,6 +107,8 @@ export const octoberStats: Stats = {
   },
   phrases: { please: 212, thanks: 168, fixIt: 94, stillBroken: 37, why: 121, sorry: 9 },
   longestSession: { project: "harbor-api", agent: "claude-code", minutes: 312, date: "2026-10-21" },
+  // Fake September for the "vs last month" readouts.
+  previous: { label: "September 2026", shortLabel: "SEP", activeMinutes: 4260, sessions: 251, changePct: 21 },
   personalityHints: [
     { id: "3am-shipper", score: 0.82, reason: "24% of active minutes were between midnight and 5AM." },
     { id: "juggler", score: 0.64, reason: "6 projects across 2 agents." },
@@ -163,7 +165,7 @@ export const octoberStory: Story = {
 export const octoberProps: RecapProps = {
   stats: octoberStats,
   story: octoberStory,
-  prefs: { ...DEFAULT_PREFS, theme: "night" },
+  prefs: { ...DEFAULT_PREFS, theme: "tape", accent: "red" },
   scenes: SCENE_ORDER,
   repoUrl: REPO_URL,
   customFontStaticPath: null,

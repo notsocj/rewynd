@@ -13,7 +13,7 @@ import { useVideoConfig } from "remotion";
 import type { RecapProps, SceneId } from "../../../contract/recap";
 import { REPO_URL } from "../../../contract/recap";
 import { getFont, type FontSpec } from "../fonts";
-import { getTheme, resolveThemeId, type Theme } from "../theme";
+import { getTheme, resolveTheme, type Theme } from "../theme";
 
 export type Recap = {
   props: RecapProps;
@@ -61,7 +61,8 @@ export const RecapProvider: React.FC<{ props: RecapProps; children: React.ReactN
 
   const value = useMemo<Recap>(() => {
     const wide = width > height;
-    const themeId = resolveThemeId(props.prefs.theme, props.story.personality.id);
+    const pick = resolveTheme(props.prefs.theme, props.prefs.accent, props.story.personality.id);
+    const theme = getTheme(pick.theme, pick.accent);
     const hide = props.prefs.hideProjectNames;
 
     const aliases = new Map<string, string>();
@@ -75,8 +76,8 @@ export const RecapProvider: React.FC<{ props: RecapProps; children: React.ReactN
 
     return {
       props,
-      theme: getTheme(themeId),
-      font: getFont(props.customFontStaticPath),
+      theme,
+      font: getFont(props.customFontStaticPath, theme.fonts),
       wide,
       s: wide ? 0.74 : 1,
       name: (raw) => (hide ? aliases.get(raw) ?? "Project ?" : raw),

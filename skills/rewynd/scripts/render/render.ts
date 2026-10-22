@@ -37,27 +37,55 @@ export const VIDEO_COMPOSITION = "Rewynd";
 export const CARD_COMPOSITION = "RewyndCard";
 
 export type RenderOptions = { card: boolean; format?: DesignPrefs["format"] };
-export type RenderResult = { files: string[]; props: string; scenes: SceneId[]; theme: string };
+export type RenderResult = { files: string[]; props: string; scenes: SceneId[]; theme: string; accent: string | null };
 
 // -----------------------------------------------------------------------------
 // Themes (owned by the video template: video/src/themes.json)
 // -----------------------------------------------------------------------------
 
-export type ThemeInfo = { id: string; label: string; description?: string };
+export type AccentInfo = { id: string; label: string; color: string };
+/** A card TEMPLATE (tape, terminal, receipt, arcade) and its accent colors. */
+export type ThemeInfo = { id: string; label: string; description?: string; accents: AccentInfo[] };
 
-/** Read the theme list + personality→theme map, tolerating either JSON layout. */
-export function loadThemes(): { themes: ThemeInfo[]; byPersonality: Record<string, string> } {
+/** Read the template list + personality→template map from the video template. */
+export function loadThemes(): { default: string; themes: ThemeInfo[]; byPersonality: Record<string, { theme: string; accent: string }> } {
   const raw = readJsonFile<any>(path.join(VIDEO_DIR, "src", "themes.json"), null);
-  const list: any[] = Array.isArray(raw) ? raw : Array.isArray(raw?.themes) ? raw.themes : [];
-  const themes = list.filter((t) => t && typeof t.id === "string").map((t) => ({ id: t.id, label: t.label ?? t.id, description: t.description }));
-  const map = raw?.byPersonality ?? raw?.personalityThemes ?? raw?.personality ?? raw?.auto ?? {};
-  return { themes, byPersonality: typeof map === "object" && map ? map : {} };
+  const list: any[] = Array.isArray(raw?.themes) ? raw.themes : [];
+  const themes = list
+    .filter((t) => t && typeof t.id === "string")
+    .map((t) => ({
+      id: t.id,
+      label: t.label ?? t.id,
+      description: t.description,
+      accents: Array.isArray(t.accents) ? t.accents.filter((a: any) => a && typeof a.id === "string") : [],
+    }));
+  const map = raw?.personalityThemes && typeof raw.personalityThemes === "object" ? raw.personalityThemes : {};
+  return { default: typeof raw?.default === "string" ? raw.default : themes[0]?.id ?? "tape", themes, byPersonality: map };
 }
 
-function resolveTheme(prefs: DesignPrefs, story: Story): string {
-  const { themes, byPersonality } = loadThemes();
-  if (prefs.theme !== "auto" && themes.some((t) => t.id === prefs.theme)) return prefs.theme;
-  return byPersonality[story.personality.id] ?? themes[0]?.id ?? "default";
+// Old v0.1 theme ids → the template that replaced them (kept so saved
+// preferences from before still work).
+const LEGACY_THEMES: Record<string, { theme: string; accent: string }> = {
+  night: { theme: "tape", accent: "mint" },
+  midnight: { theme: "tape", accent: "mint" },
+  bluescreen: { theme: "tape", accent: "amber" },
+  label: { theme: "receipt", accent: "yellow" },
+};
+
+/** "auto" → the personality's template + accent; unknown ids → the default template. */
+export function resolveTheme(prefs: DesignPrefs, story: Story): { theme: string; accent: string | null } {
+  const { themes, byPersonality, default: fallback } = loadThemes();
+  let theme = prefs.theme;
+  let accent = prefs.accent ?? null;
+  if (LEGACY_THEMES[theme]) ({ theme, accent } = { theme: LEGACY_THEMES[theme].theme, accent: accent ?? LEGACY_THEMES[theme].accent });
+  if (theme === "auto") {
+    const pick = byPersonality[story.personality.id];
+    theme = pick?.theme ?? fallback;
+    accent = accent ?? pick?.accent ?? null;
+  }
+  const entry = themes.find((t) => t.id === theme) ?? themes.find((t) => t.id === fallback);
+  if (!entry) return { theme: fallback, accent: null };
+  return { theme: entry.id, accent: entry.accents.some((a) => a.id === accent) ? accent : entry.accents[0]?.id ?? null };
 }
 
 // -----------------------------------------------------------------------------
@@ -136,7 +164,9 @@ export function buildProps(opts: RenderOptions): { props: RecapProps; errors: st
 
   const design = { ...DEFAULT_PREFS, ...(loadPrefs().design ?? {}) };
   if (opts.format) design.format = opts.format;
-  design.theme = resolveTheme(design, story);
+  const look = resolveTheme(design, story);
+  design.theme = look.theme;
+  design.accent = look.accent;
 
   const { stats: s, story: st } = design.hideProjectNames ? anonymize(stats, story) : { stats, story };
 
@@ -221,5 +251,5 @@ export function render(opts: RenderOptions): RenderResult | { errors: string[] }
     if (r.status !== 0) throw new Error(`Remotion failed to render ${path.basename(out)} (see the log above)`);
     files.push(out);
   }
-  return { files, props: propsFile, scenes: props.scenes, theme: props.prefs.theme };
+  return { files, props: propsFile, scenes: props.scenes, theme: props.prefs.theme, accent: props.prefs.accent };
 }

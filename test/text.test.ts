@@ -5,7 +5,9 @@ import assert from "node:assert/strict";
 import { redact } from "../skills/rewynd/scripts/samples/redact.ts";
 import { categorize, categorizeCommand } from "../skills/rewynd/scripts/sources/tool-categories.ts";
 import { numbersIn, validateStory } from "../skills/rewynd/scripts/story/validate-story.ts";
-import { parsePeriod } from "../skills/rewynd/scripts/stats/period.ts";
+import { parsePeriod, previousPeriod } from "../skills/rewynd/scripts/stats/period.ts";
+import { resolveTheme, loadThemes } from "../skills/rewynd/scripts/render/render.ts";
+import { DEFAULT_PREFS } from "../skills/rewynd/contract/recap.ts";
 import { roundToHundred } from "../skills/rewynd/scripts/stats/build-stats.ts";
 import type { Stats } from "../skills/rewynd/contract/recap.ts";
 
@@ -68,6 +70,7 @@ function fakeStats(): Stats {
     time: { busiestDay: { date: "2026-10-21", minutes: 700 }, busiestHour: 2, hours: new Array(24).fill(0), weekdays: new Array(7).fill(0), lateNightSessions: 46, longestStreakDays: 22, heatmap: [] },
     phrases: { please: 52, thanks: 17, fixIt: 67, stillBroken: 1, why: 125, sorry: 25 },
     longestSession: null, personalityHints: [], shipped: null,
+    previous: { label: "September 2026", shortLabel: "SEP", activeMinutes: 4260, sessions: 251, changePct: 21 },
   };
 }
 
@@ -77,7 +80,7 @@ const goodStory = {
   captions: { hours: "86 hours with AI this month", mainAI: "You cheated on Claude Code with Codex 41 times" },
   projects: [{ name: "lumen", line: "lumen: mostly fighting auth" }],
   hardestBug: null,
-  funnyLines: ["You said 'why' 125 times."],
+  funnyLines: ["You said 'why' 125 times.", "Up 21% on September."],
   backgroundLine: "Codex double-checked itself 702 times.",
   closing: "See you next month.",
 };
@@ -105,4 +108,21 @@ test("periods and percentages", () => {
   assert.equal(parsePeriod({ year: "2026" }).tapeLabel, "2026");
   assert.deepEqual(roundToHundred([33.3, 33.3, 33.4]), [33, 33, 34]);
   assert.equal(roundToHundred([62.4, 30.4, 7.2]).reduce((a, b) => a + b, 0), 100);
+});
+
+test("previous period: last month / last year", () => {
+  assert.equal(previousPeriod(parsePeriod({ month: "2026-10" }))!.label, "September 2026");
+  assert.equal(previousPeriod(parsePeriod({ month: "2026-01" }))!.label, "December 2025");
+  assert.equal(previousPeriod(parsePeriod({ year: "2026" }))!.label, "2025");
+});
+
+test("templates: every template has 3 accents; auto, legacy ids and bad accents resolve", () => {
+  const { themes } = loadThemes();
+  assert.deepEqual(themes.map((t) => t.id), ["tape", "terminal", "receipt", "arcade"]);
+  for (const t of themes) assert.equal(t.accents.length, 3, t.id);
+  const story = { personality: { id: "3am-shipper" } } as any;
+  assert.deepEqual(resolveTheme({ ...DEFAULT_PREFS, theme: "auto" }, story), { theme: "tape", accent: "mint" });
+  assert.deepEqual(resolveTheme({ ...DEFAULT_PREFS, theme: "night" }, story), { theme: "tape", accent: "mint" });
+  assert.deepEqual(resolveTheme({ ...DEFAULT_PREFS, theme: "arcade", accent: "nope" }, story), { theme: "arcade", accent: "yellow" });
+  assert.deepEqual(resolveTheme({ ...DEFAULT_PREFS, theme: "receipt", accent: "blue" }, story), { theme: "receipt", accent: "blue" });
 });

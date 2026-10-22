@@ -7,11 +7,12 @@
 
 import React from "react";
 import { AbsoluteFill, Img, staticFile } from "remotion";
+import { getTheme } from "../theme";
 import { getFont } from "../fonts";
 import type { CompareProps } from "../schema";
 
 export const Compare: React.FC<CompareProps> = ({ title, panels }) => {
-  const font = getFont(null);
+  const font = getFont(null, getTheme("tape").fonts);
   return (
     <AbsoluteFill style={{ backgroundColor: "#2A2A2A", fontFamily: font.family, color: "#EFEEE9", padding: 40 }}>
       <div style={{ fontSize: 44, fontWeight: 900, marginBottom: 24 }}>{title}</div>

@@ -1,68 +1,57 @@
-// The camcorder on-screen display (OSD) across the top of every card:
-// a blinking "● REC" on the left and a running tape counter on the right.
+// The camcorder on-screen display (OSD) at the top of every TAPE card:
 //
-// The counter shows whatever the card passes in (e.g. the hours card counts
-// up to "▶ 086:12:40" in sync with its big number). If a card passes
-// nothing, it shows a normal running timecode, so the tape always feels
-// like it's playing.
+//   ● REC                         OCT 31 2026
+//   ▶ PLAY   00:86:12:04
+//
+// Set in VT323, the blocky font of real camcorder/VCR displays. The REC dot
+// blinks; the date is the last day of the recording; the counter under it is
+// whatever the card passes in (the hours card rolls it up in sync with its big
+// number), or a normal running timecode so the tape always feels like it's
+// playing.
 
 import React from "react";
 import { useCurrentFrame, useVideoConfig } from "remotion";
+import { stampDay } from "../components/format";
 import { useRecap } from "../recap/context";
-import { PlayIcon, RecIcon } from "./Icons";
-import { frameFor } from "./layout";
 
-// Two-digit padding: 7 → "07".
 const pad = (n: number) => String(n).padStart(2, "0");
 
-export const Osd: React.FC<{ counter?: string }> = ({ counter }) => {
+export const Osd: React.FC<{ counter?: string; right?: string }> = ({ counter, right }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const { theme, font, wide, s } = useRecap();
-  const f = frameFor(wide);
+  const { theme, font, wide, s, props } = useRecap();
 
   // REC dot blinks: on for 2/3 of a second, off for 1/3, like a camcorder.
   const recOn = frame % fps < fps * 0.66;
+  // Fallback timecode: HH:MM:SS:FF, counting from the start of the card.
+  const sec = Math.floor(frame / fps);
+  const timecode = `00:${pad(Math.floor(sec / 60))}:${pad(sec % 60)}:${pad(frame % fps)}`;
+  // Date stamp: the last day of the recording (today, for a month in progress).
+  const last = props.stats.coverage.lastSavedDay ?? props.stats.period.to;
+  const date = right ?? stampDay(last < props.stats.period.to ? last : props.stats.period.to).toUpperCase();
 
-  // Fallback timecode: MM:SS:FF (minutes, seconds, frames).
-  const seconds = Math.floor(frame / fps);
-  const timecode = `${pad(Math.floor(seconds / 60))}:${pad(seconds % 60)}:${pad(frame % fps)}`;
-
-  const text: React.CSSProperties = {
-    fontFamily: font.family,
-    fontWeight: 800,
-    fontSize: 44 * s,
-    letterSpacing: "0.04em",
-    fontVariantNumeric: "tabular-nums",
-    color: theme.fg,
-    textShadow: theme.osdShadow,
-    display: "flex",
-    alignItems: "center",
-    gap: 14 * s,
-  };
-
+  const side = wide ? 80 : 80;
   return (
     <div
       style={{
         position: "absolute",
-        left: f.side,
-        right: f.side,
-        top: f.osdTop,
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
+        left: side,
+        right: side,
+        top: wide ? 46 : 80,
+        fontFamily: font.ui,
+        color: theme.fg,
+        whiteSpace: "nowrap",
       }}
     >
-      <div style={text}>
-        {/* Keep the dot's space when it's "off" so "REC" doesn't jump. */}
-        <span style={{ opacity: recOn ? 1 : 0, display: "flex" }}>
-          <RecIcon size={40 * s} color={theme.rec} />
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 60 * s, letterSpacing: 2 * s }}>
+        <span>
+          {/* Keep the dot's space when it's "off" so "REC" doesn't jump. */}
+          <span style={{ color: theme.accent, opacity: recOn ? 1 : 0 }}>●</span> REC
         </span>
-        REC
+        <span>{date}</span>
       </div>
-      <div style={text}>
-        <PlayIcon size={34 * s} color={theme.fg} />
-        {counter ?? timecode}
+      <div style={{ fontSize: 48 * s, color: theme.dim, marginTop: 8 * s, fontVariantNumeric: "tabular-nums" }}>
+        ▶ PLAY&nbsp;&nbsp;&nbsp;{counter ?? timecode}
       </div>
     </div>
   );

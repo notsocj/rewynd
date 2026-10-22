@@ -1,50 +1,44 @@
-// The frame every scene is built on. Back to front:
-// 1. the full-bleed background color (the "color field")
-// 2. the scene's own content, inside the handheld camera (see Camera.tsx)
-// 3. the camcorder OSD at the top (REC + tape counter)
-// 4. the transport buttons and the footer at the bottom
-// 5. scan lines over everything
+// The frame every scene is built on. Which frame depends on the user's
+// TEMPLATE (theme.template):
 //
-// Keeping this in one place means every scene gets the same chrome in the
-// same spots, inside the safe area, in both sizes (see layout.ts).
+//   tape     camcorder display (REC + date + timecode), transport buttons,
+//            scan lines, footer                       → templates/frames/Tape
+//   terminal the whole card is one terminal window     → templates/frames/Terminal
+//   receipt  a strip of till paper on a color field    → templates/frames/Receipt
+//   arcade   an 8-bit cabinet screen                   → templates/frames/Arcade
+//
+// Every frame puts the scene's content inside the camcorder <Camera> (so it
+// drifts while the frame stays locked) and tells <Stage> where the free
+// space is (ContentRectContext). Scenes just write <TapeCard>…</TapeCard>.
 
-import React, { useContext } from "react";
-import { AbsoluteFill } from "remotion";
-import { Camera } from "./Camera";
+import React from "react";
 import { useRecap } from "../recap/context";
-import { Footer } from "./Footer";
-import { Osd } from "./Osd";
-import { RewindingContext } from "./RewindGlitch";
-import { Scanlines } from "./Scanlines";
-import { Transport, type TransportButton } from "./Transport";
+import { ArcadeFrame } from "../templates/frames/Arcade";
+import { ReceiptFrame } from "../templates/frames/Receipt";
+import { TapeFrame } from "../templates/frames/Tape";
+import { TerminalFrame } from "../templates/frames/Terminal";
+import type { TransportButton } from "./Transport";
 
-type Props = {
-  counter?: string; // text for the top-right tape counter (optional)
-  active?: TransportButton; // which transport button is pressed
+export type CardProps = {
+  counter?: string; // text for the tape counter (optional)
+  active?: TransportButton; // which transport button is pressed (tape)
+  // Hide the tape transport row (some full-bleed card designs leave it out).
+  transport?: boolean;
+  // Replace the date in the tape's top-right corner (e.g. "03:00 AM").
+  osdRight?: string;
   children: React.ReactNode;
 };
 
-export const TapeCard: React.FC<Props> = ({ counter, active = "play", children }) => {
-  const { theme, font } = useRecap();
-  // During the rewind glitch at the start of a scene, REW is pressed.
-  const rewinding = useContext(RewindingContext);
-
-  return (
-    <AbsoluteFill
-      style={{
-        backgroundColor: theme.bg,
-        color: theme.fg,
-        fontFamily: font.family,
-        overflow: "hidden",
-      }}
-    >
-      {/* Only the content is "filmed" (drifts with the camera); the
-          chrome below stays locked like a viewfinder overlay. */}
-      <Camera>{children}</Camera>
-      <Osd counter={counter} />
-      <Transport active={rewinding ? "rew" : active} />
-      <Footer />
-      <Scanlines lineColor={theme.scanline} />
-    </AbsoluteFill>
-  );
+export const TapeCard: React.FC<CardProps> = (props) => {
+  const { theme } = useRecap();
+  switch (theme.template) {
+    case "terminal":
+      return <TerminalFrame {...props} />;
+    case "receipt":
+      return <ReceiptFrame {...props} />;
+    case "arcade":
+      return <ArcadeFrame {...props} />;
+    default:
+      return <TapeFrame {...props} />;
+  }
 };

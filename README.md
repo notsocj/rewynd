@@ -129,7 +129,11 @@ Skill and plugin updates replace the installed folder, so rewynd never keeps you
 ## Your look
 
 Before rendering, rewynd asks once and remembers the answers:
-- **Theme**: Auto (matches your personality), Night, Blue screen, Midnight, or Tape label
+- **Template**: Auto (matches your personality), or one of four card styles, each with 3 accent colors:
+  - **Tape**: a camcorder recording (REC light, timecode, handwritten tape label)
+  - **Terminal**: your month as terminal output (monospace, diff-colored lines)
+  - **Receipt**: a printed receipt on a bright color (itemized stats, barcode, rubber stamp)
+  - **Arcade**: an 8-bit cabinet screen (pixel font, high-score table, character select)
 - **Font**: Inter, or your own font file (only copied locally for the render)
 - **Format**: vertical 9:16 (TikTok / Reels / Stories), wide 16:9 (X / YouTube), or both
 - **Hide project names**: shows "Project A / B / C" instead (client work stays private)

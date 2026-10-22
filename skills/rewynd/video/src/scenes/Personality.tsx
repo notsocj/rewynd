@@ -10,6 +10,7 @@ import { PERSONALITIES } from "../../../contract/recap";
 import { Appear } from "../components/Appear";
 import { stampDay } from "../components/format";
 import { useRecap } from "../recap/context";
+import { DESIGNS } from "../templates/designs";
 import { Stage, useSlotWidth } from "../tape/Stage";
 import { TapeCard } from "../tape/TapeCard";
 import { Viewfinder } from "../tape/Viewfinder";
@@ -113,10 +114,22 @@ const Flash: React.FC = () => {
   return frame >= TITLE_AT && opacity > 0 ? <AbsoluteFill style={{ background: "#FFFFFF", opacity, pointerEvents: "none" }} /> : null;
 };
 
-export const Personality: React.FC = () => (
-  // REC is pressed on this card: "this is you, on tape".
-  <TapeCard active="rec">
-    <Stage scene="personality" primaryShare={0.46} primary={<Shot />} secondary={<Reveal />} />
-    <Flash />
-  </TapeCard>
-);
+export const Personality: React.FC = () => {
+  const { theme, wide } = useRecap();
+  // Vertical videos use the template's hand-designed card (templates/designs).
+  const Designed = DESIGNS[theme.template].personality;
+  return (
+    <>
+      {wide ? (
+        // REC is pressed on this card: "this is you, on tape".
+        <TapeCard active="rec">
+          <Stage scene="personality" primaryShare={0.46} primary={<Shot />} secondary={<Reveal />} />
+        </TapeCard>
+      ) : (
+        <Designed />
+      )}
+      {/* The camera flash fires on every template as the title lands. */}
+      <Flash />
+    </>
+  );
+};

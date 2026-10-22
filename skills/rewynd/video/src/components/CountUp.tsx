@@ -44,9 +44,11 @@ type Props = {
   color: string;
   textShadow?: string;
   delay?: number;
+  // Pixel fonts need room above/below their square glyphs.
+  lineHeight?: number;
 };
 
-export const CountUp: React.FC<Props> = ({ value, font, fontSize, color, textShadow, delay = 0 }) => {
+export const CountUp: React.FC<Props> = ({ value, font, fontSize, color, textShadow, delay = 0, lineHeight = 0.8 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
@@ -70,10 +72,10 @@ export const CountUp: React.FC<Props> = ({ value, font, fontSize, color, textSha
     <span
       style={{
         display: "inline-block",
-        fontFamily: font.family,
+        fontFamily: font.hero,
         fontWeight: font.black,
         fontSize,
-        lineHeight: 0.8,
+        lineHeight,
         letterSpacing: font.heroTracking,
         fontVariantNumeric: "tabular-nums",
         color,

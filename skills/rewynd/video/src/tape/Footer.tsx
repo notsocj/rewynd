@@ -1,40 +1,51 @@
 // The last line of every card: "made with rewynd" plus the repo URL.
 // This is the growth loop: every shared video advertises the project, and
 // the URL is written out because screenshots lose links.
+//
+// Each template sets it in its own voice: the frame passes the font, color
+// and position; this component only does the layout.
 
 import React from "react";
 import { useRecap } from "../recap/context";
-import { RewindIcon } from "./Icons";
-import { frameFor } from "./layout";
 
-export const Footer: React.FC = () => {
-  const { theme, font, wide, s, repoUrl } = useRecap();
-  const f = frameFor(wide);
+type Props = {
+  font?: string;
+  size?: number; // px at vertical scale
+  color?: string;
+  weight?: number;
+  bottom?: number;
+  side?: number;
+  // Lower-case "made with rewynd · url" on one line (terminal style).
+  inline?: boolean;
+  uppercase?: boolean;
+};
 
-  return (
-    <div
-      style={{
-        position: "absolute",
-        left: f.side,
-        // Vertical: spread across the width. Wide: left half only, because
-        // the transport bar takes the right side of the same row.
-        ...(wide ? { width: 980, gap: 36 } : { right: f.side, justifyContent: "space-between" }),
-        bottom: f.footerBottom,
-        display: "flex",
-        alignItems: "center",
-        fontFamily: font.family,
-        color: theme.fg,
-        textShadow: theme.osdShadow,
-        whiteSpace: "nowrap",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 12 * s, fontSize: 34 * s, fontWeight: 800 }}>
-        <RewindIcon size={36 * s} color={theme.fg} />
-        made with rewynd
-      </div>
-      <div style={{ fontSize: 30 * s, fontWeight: 600, color: theme.dim, overflow: "hidden", textOverflow: "ellipsis" }}>
-        {repoUrl}
-      </div>
+export const Footer: React.FC<Props> = ({ font, size = 40, color, weight = 400, bottom, side = 80, inline = false, uppercase = true }) => {
+  const { theme, font: f, wide, s, repoUrl } = useRecap();
+  const label = uppercase ? "MADE WITH REWYND" : "made with rewynd";
+  const style: React.CSSProperties = {
+    position: "absolute",
+    left: side,
+    right: side,
+    bottom: bottom ?? (wide ? 40 : 80),
+    display: "flex",
+    justifyContent: inline ? "flex-start" : "space-between",
+    gap: 24 * s,
+    fontFamily: font ?? f.ui,
+    fontSize: size * s,
+    fontWeight: weight,
+    color: color ?? theme.dim,
+    whiteSpace: "nowrap",
+    letterSpacing: uppercase ? 1 * s : 0,
+  };
+  return inline ? (
+    <div style={style}>
+      {label} · {repoUrl}
+    </div>
+  ) : (
+    <div style={style}>
+      <span>{label}</span>
+      <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{repoUrl}</span>
     </div>
   );
 };

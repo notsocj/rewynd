@@ -20,8 +20,11 @@ import { SCENE_ORDER } from "../../contract/recap";
 const sceneIds = SCENE_ORDER as [SceneId, ...SceneId[]];
 
 export const designPrefsSchema = z.object({
-  // A theme id from themes.json, or "auto" (picked from the personality).
+  // A template id from themes.json ("tape", "terminal", "receipt", "arcade"),
+  // or "auto" (picked from the personality).
   theme: z.string(),
+  // One of that template's accent ids, or null for its first accent.
+  accent: z.string().nullable(),
   font: z.union([
     z.object({ kind: z.literal("inter") }),
     z.object({ kind: z.literal("custom"), file: z.string() }),

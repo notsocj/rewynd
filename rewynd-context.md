@@ -704,3 +704,9 @@ What changed in rewynd because of that:
 - SKILL.md finds its scripts via `${CLAUDE_SKILL_DIR}` (works for plugin and plain skill installs), falling back to "the folder this SKILL.md is in" for other agents.
 - The renderer runs Remotion through `node node_modules/@remotion/cli/remotion-cli.js`, not the `.bin` symlink, and treats deps as missing unless `@remotion/cli/dist/index.js` exists (copies with resolved symlinks broke the `.bin` launcher).
 - Verified: installed into a throwaway home with the real CLI; `status` defaulted to `~/.rewynd/data`; `collect` read real history; a fresh first render installed deps + the headless browser and rendered the card in ~23 s. The tracked skill folder is ~0.7 MB.
+
+---
+
+## 23. Card templates (Oct 22, 2026)
+
+From the "rewynd card directions" mockups: **Tape** (updated default), **Terminal**, **Receipt**, **Arcade**, each with 3 accents. `prefs.theme` is now a template id (or `"auto"` → per-personality template + accent from `themes.json`), plus a new `prefs.accent`. Old theme ids map onto templates. Hours, top tools and personality are hand-designed per template (vertical); every other scene and all wide layouts use the template-aware shared pieces. `stats.previous` (last period from saved days, with `changePct`) powers the "vs September" readouts. Details: DESIGN.md §9.

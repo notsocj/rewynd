@@ -97,12 +97,12 @@ Run `story-check`. If `ok` is false, fix every listed error in `story.json` and 
 ### 6. Design choices
 Run `prefs`.
 - If `prefs.design` is `null` (first time), ask these questions in **one** prompt (multiple-choice where the tool allows it):
-  1. **Theme**: "Auto (matches your personality)" plus each theme from the `themes` command (`label`, `description`).
+  1. **Template**: "Auto (matches your personality)" plus each template from the `themes` command (`label` + `description`): Tape, Terminal, Receipt, Arcade. Then, unless they picked Auto, ask which of that template's 3 `accents` they want (show each `label`).
   2. **Font**: Inter (default) or "My own font" (ask for the path to a .ttf / .otf / .woff2 file on their machine).
   3. **Format**: Vertical 9:16 (TikTok / Reels / Stories, default) · Wide 16:9 (X / YouTube) · Both.
   4. **Show project names?** Ask only if `stats.projects` isn't empty: "Yes" or "Hide them (Project A / B / C)". Project names can give away client work.
-  Save with: `prefs --set '{"design":{"theme":"auto","font":{"kind":"inter"},"format":"vertical","hideProjectNames":false,"musicFile":null}}'`
-- If preferences exist, ask one question: "Use the same look as last time (theme X, format Y)?" and only re-ask what they want to change.
+  Save with: `prefs --set '{"design":{"theme":"auto","accent":null,"font":{"kind":"inter"},"format":"vertical","hideProjectNames":false,"musicFile":null}}'` (`theme` = template id or `"auto"`, `accent` = accent id or `null`)
+- If preferences exist, ask one question: "Use the same look as last time (template X, accent Y, format Z)?" and only re-ask what they want to change.
 - Music: none by default. Only if the user offers their own audio file, set `"musicFile": "/abs/path"`. rewynd never ships music.
 
 ### 7. Render (zero tokens)

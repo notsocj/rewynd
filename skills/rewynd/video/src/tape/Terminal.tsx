@@ -13,6 +13,9 @@ import { useRecap } from "../recap/context";
 // must use the panel colors, not the card's (on the light theme the card's
 // dim text is dark gray and would vanish on the black terminal).
 const InPanel = createContext(false);
+// True inside a plain (window-less) block on the TERMINAL template: the
+// scene heading already printed the command, so prompts inside are skipped.
+const NoPrompt = createContext(false);
 
 // ---------------------------------------------------------------------------
 // Blinking block cursor.
@@ -62,6 +65,11 @@ type PromptProps = {
 export const TypedPrompt: React.FC<PromptProps> = ({ command, fontSize, textColor, delay = 0, cursorAtEnd = false }) => {
   const frame = useCurrentFrame();
   const { theme, font } = useRecap();
+  // Only the terminal and tape templates "type commands". On a receipt or an
+  // arcade screen a shell prompt would break the illusion, so it's left out.
+  const noPrompt = useContext(NoPrompt);
+  if (theme.template === "receipt" || theme.template === "arcade" || noPrompt) return null;
+  const tape = theme.template === "tape";
   const inPanel = useContext(InPanel);
   const color = textColor ?? (inPanel ? theme.panelDim : theme.dim);
   // About 1.5 characters per frame: fast enough to finish in under a
@@ -72,9 +80,10 @@ export const TypedPrompt: React.FC<PromptProps> = ({ command, fontSize, textColo
   return (
     <div
       style={{
-        fontFamily: font.family,
-        fontSize,
-        fontWeight: 700,
+        fontFamily: font.ui,
+        // VT323 is a bitmap-style font: it runs small, so it gets a size bump.
+        fontSize: tape ? fontSize * 1.25 : fontSize,
+        fontWeight: tape ? 400 : 700,
         color,
         whiteSpace: "nowrap",
         overflow: "hidden",
@@ -83,8 +92,8 @@ export const TypedPrompt: React.FC<PromptProps> = ({ command, fontSize, textColo
         gap: "0.4em",
       }}
     >
-      {/* The prompt sign is diff-green, like a shell prompt. */}
-      <span style={{ color: theme.add, fontWeight: 900 }}>$</span>
+      {/* Terminal: a "$" prompt in the accent color. Tape: a ▶ play mark. */}
+      <span style={{ color: theme.accent, fontWeight: 900 }}>{tape ? "▶" : "$"}</span>
       <span>
         {command.slice(0, typed)}
         {/* While typing, the cursor rides at the end of the text. */}
@@ -111,6 +120,19 @@ export const TerminalWindow: React.FC<WindowProps> = ({ title, width, delay = 0,
   const { fps } = useVideoConfig();
   // The window pops open: a quick scale-up from 94% with a little settle.
   const open = spring({ frame: frame - delay, fps, config: { damping: 15, mass: 0.6 } });
+
+  // Only the TAPE template draws a window here. In the terminal template the
+  // whole card already is a window; on a receipt or arcade screen the output
+  // prints straight onto the paper / screen.
+  if (theme.template !== "tape") {
+    return (
+      <div style={{ width, opacity: interpolate(open, [0, 0.3], [0, 1], { extrapolateRight: "clamp" }) }}>
+        <NoPrompt.Provider value={theme.template === "terminal"}>
+          <InPanel.Provider value={true}>{children}</InPanel.Provider>
+        </NoPrompt.Provider>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -147,8 +169,8 @@ export const TerminalWindow: React.FC<WindowProps> = ({ title, width, delay = 0,
             left: 0,
             right: 0,
             textAlign: "center",
-            fontSize: 26 * s,
-            fontWeight: 600,
+            fontSize: 34 * s,
+            fontFamily: font.ui,
             color: theme.panelDim,
           }}
         >

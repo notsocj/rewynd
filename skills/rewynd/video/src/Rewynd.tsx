@@ -19,6 +19,7 @@ import { RecapProvider } from "./recap/context";
 import { SCENES, sceneFrames, totalFrames } from "./scenes/registry";
 import type { SingleSceneProps } from "./schema";
 import { CameraContext, seedOf } from "./tape/Camera";
+import { SceneIdContext } from "./templates/frame";
 import { RewindGlitch } from "./tape/RewindGlitch";
 
 // "vertical" → 1080×1920, "wide" → 1920×1080. "both" is split into two
@@ -54,7 +55,9 @@ export const Rewynd: React.FC<RecapProps> = (props) => {
                       The first scene starts with PLAY; the last one ends with
                       the CRT switch-off instead of a tracking slip. */}
                   <RewindGlitch seed={id} sceneFrames={frames} first={i === 0} last={i === props.scenes.length - 1}>
-                    <Scene />
+                    <SceneIdContext.Provider value={id}>
+                      <Scene />
+                    </SceneIdContext.Provider>
                   </RewindGlitch>
                 </CameraContext.Provider>
               </Series.Sequence>
@@ -77,7 +80,9 @@ export const RewyndCard: React.FC<RecapProps> = (props) => {
           instead a Sequence that "started" N-1 frames ago makes frame 0 of
           the still read as frame N-1 inside the outro. */}
       <Sequence from={-(sceneFrames("outro") - 1)}>
-        <Outro />
+        <SceneIdContext.Provider value="outro">
+          <Outro />
+        </SceneIdContext.Provider>
       </Sequence>
     </RecapProvider>
   );
@@ -90,7 +95,9 @@ export const SingleScene: React.FC<SingleSceneProps> = ({ recap, scene }) => {
     <RecapProvider props={recap}>
       <CameraContext.Provider value={{ on: true, sceneFrames: frames, seed: seedOf(scene) }}>
         <RewindGlitch seed={scene} sceneFrames={frames}>
-          <Scene />
+          <SceneIdContext.Provider value={scene}>
+            <Scene />
+          </SceneIdContext.Provider>
         </RewindGlitch>
       </CameraContext.Provider>
     </RecapProvider>

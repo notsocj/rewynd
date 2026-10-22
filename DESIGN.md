@@ -221,6 +221,25 @@ The props are `RecapProps` from **`contract/recap.ts`** (shared with scripts/): 
 
 ---
 
+## 9. Card templates
+
+The look is a **template** the user picks (DESIGN §8), from the "rewynd card directions" mockups. Each template has 3 accent colors (`skills/rewynd/video/src/themes.json`).
+
+| Template | Frame | Fonts | Accents |
+|---|---|---|---|
+| **Tape** (default) | Camcorder OSD (`● REC` + date, `▶ PLAY` timecode), transport buttons, scan lines, VT323 footer | VT323 (display), Caveat (handwritten label), Inter Black (numbers) | REC red `#FF3B30` · amber `#FFB020` · mint `#7CF0B4` |
+| **Terminal** | The whole card is one window: three dots, `~/rewynd — october.log`, `$ █` prompt at the bottom | JetBrains Mono | green `#56D364` · amber `#E3B341` · blue `#79C0FF` |
+| **Receipt** | Tilted till paper with a torn zigzag edge on a full-bleed accent field, `REWYND` header, dashed rules | Space Mono | orange `#FF6A3D` · periwinkle `#7C9CFF` · yellow `#FFD23F` |
+| **Arcade** | `1UP` / `HI · SEP` score bar, twinkling pixel stars, blinking `PRESS ◀◀ TO REWYND` | Press Start 2P (+ Inter for sentences) | yellow `#FFE14D` · cyan `#5CF2FF` · green `#7CF08A` |
+
+How it's built (`skills/rewynd/video/src/templates/`):
+- **Frames** (`frames/*.tsx`) draw each template's chrome and tell `<Stage>` where the free content area is (`ContentRectContext`), so every scene lays out inside any frame.
+- **Shared, template-aware pieces** carry the voice into all 12 scenes: `Heading` (tape sticker / `$ command` + `snake_case` title / receipt line / pixel title), `Hero` numbers, `TermList` (tracklist / terminal bars / dotted receipt lines / high-score table), `LevelMeter` (segments / solid / pixel blocks), `TypedPrompt`, and the outro grid.
+- **Hand-designed cards** (`designs/*.tsx`): hours, top tools and personality follow the mockups closely in every template (vertical). Wide videos use the shared layout.
+- All numbers are real. Mockup details with no real data behind them were swapped: "RETRIES" → other tool calls; "commits after 12AM" → commits with AI; the git-log of late-night commit messages → rewynd's real personality scores (rewynd never reads commit messages); "vs September" uses `stats.previous`, which only exists when last month was saved.
+- Fonts are OFL and installed from npm (`@fontsource/vt323`, `@fontsource-variable/caveat`, `@fontsource-variable/jetbrains-mono`, `@fontsource/space-mono`, `@fontsource/press-start-2p`), so rendering stays offline.
+- Old v0.1 theme ids still work: `night`/`midnight` → Tape mint, `bluescreen` → Tape amber, `label` → Receipt yellow.
+
 ## Open questions
 
 - [ ] Is Inter enough for the terminal lines, or add an OFL mono just for commands (§1 trade-off)?

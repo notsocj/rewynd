@@ -34,11 +34,48 @@ const Grid: React.FC = () => {
     { label: "PERSONALITY", value: (p.title || PERSONALITIES[p.id]?.title || "—").replace(/^The /, "") },
   ];
 
+  // RECEIPT: printed line items ("HOURS ........ 86H").
+  if (theme.template === "receipt") {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 * s, textAlign: "left" }}>
+        {tiles.map((t, i) => (
+          <Appear key={t.label} delay={10 + i * 3} distance={0}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 14 * s, fontSize: 32 * s }}>
+              <span style={{ flexShrink: 0 }}>{t.label}</span>
+              <span style={{ flexGrow: 1, borderBottom: `${4 * s}px dotted ${theme.fg}`, translate: `0 ${-8 * s}px`, minWidth: 16 * s }} />
+              <span style={{ fontWeight: 700, ...ellipsis, maxWidth: "58%", color: i === 7 ? theme.stamp : theme.fg }}>{t.value.toUpperCase()}</span>
+            </div>
+          </Appear>
+        ))}
+      </div>
+    );
+  }
+
+  // TERMINAL: a summary object printed as `key = value` lines.
+  if (theme.template === "terminal") {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 * s, fontSize: 36 * s, lineHeight: 1.5 }}>
+        {tiles.map((t, i) => (
+          <Appear key={t.label} delay={10 + i * 3} distance={0}>
+            <div style={{ ...ellipsis }}>
+              <span style={{ color: theme.dim }}>{t.label.toLowerCase().replace(/ /g, "_").padEnd(13, "\u00a0")}</span>
+              <span style={{ color: theme.dim }}>= </span>
+              <span style={{ color: i === 7 ? theme.accent : theme.fg }}>"{t.value}"</span>
+            </div>
+          </Appear>
+        ))}
+      </div>
+    );
+  }
+
+  const arcade = theme.template === "arcade";
   return (
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "1fr 1fr",
+        // minmax(0, 1fr): columns may shrink below their content, so a long
+        // value truncates with "…" instead of pushing the grid wider.
+        gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
         gap: `${18 * s}px ${18 * s}px`,
       }}
     >
@@ -46,13 +83,24 @@ const Grid: React.FC = () => {
         <Appear key={t.label} delay={10 + i * 3} distance={14}>
           <div
             style={{
-              border: `${3 * s}px solid ${theme.faint}`,
-              borderRadius: 16 * s,
+              border: `${(arcade ? 4 : 3) * s}px solid ${arcade ? theme.faint : theme.faint}`,
+              borderRadius: arcade ? 0 : 16 * s,
               padding: `${18 * s}px ${22 * s}px`,
               minWidth: 0,
             }}
           >
-            <div style={{ fontSize: 24 * s, fontWeight: 800, letterSpacing: "0.12em", color: theme.dim }}>{t.label}</div>
+            <div
+              style={{
+                fontFamily: font.ui,
+                fontSize: (arcade ? 20 : theme.template === "tape" ? 34 : 24) * s,
+                fontWeight: arcade || theme.template === "tape" ? 400 : 800,
+                letterSpacing: arcade ? 0 : "0.08em",
+                color: arcade ? theme.cyan : theme.dim,
+                lineHeight: 1.4,
+              }}
+            >
+              {t.label}
+            </div>
             <div
               style={{
                 marginTop: 6 * s,
@@ -60,6 +108,7 @@ const Grid: React.FC = () => {
                 fontWeight: font.black,
                 letterSpacing: "-0.03em",
                 color: i === 7 ? theme.accent : theme.fg,
+                fontFamily: font.hero === font.ui ? font.family : undefined,
                 textShadow: theme.osdShadow,
                 fontVariantNumeric: "tabular-nums",
                 ...ellipsis,
