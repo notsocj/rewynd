@@ -13,7 +13,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { REPO_ROOT, REWYND_ROOT, dataDir, home, isDir, tildify } from "./lib/paths.ts";
+import { REPO_ROOT, REWYND_ROOT, dataDir, expandHome, home, isDir, tildify } from "./lib/paths.ts";
 import { readJsonFile } from "./lib/files.ts";
 import { saveDays } from "./store/days-store.ts";
 import type { DayRecord } from "./store/day.ts";
@@ -50,7 +50,9 @@ export function previousDataCandidates(): { dir: string; days: number }[] {
 }
 
 /** Copy saved days (and preferences, if you have none yet) from another data folder. */
-export function migrateFrom(from: string) {
+export function migrateFrom(dir: string) {
+  // `status` prints these folders as "~/…", and a quoted "~" reaches us unexpanded.
+  const from = expandHome(dir);
   const src = isDir(path.join(from, "days")) ? from : path.join(from, "data");
   const daysDir = path.join(src, "days");
   if (!isDir(daysDir)) throw new Error(`no saved days found in ${tildify(from)}`);

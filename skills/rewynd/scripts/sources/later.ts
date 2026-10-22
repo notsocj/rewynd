@@ -4,7 +4,7 @@
 // Cursor and Antigravity are on the "later / optional" list (rewynd-context.md
 // §18). Their history lives in undocumented SQLite databases that change when
 // the app updates (Cursor's can be ~1.5 GB), so reading them needs real test
-// data first. For now we only detect them, so /rewynd-status can say
+// data first. For now we only detect them, so /rewynd status can say
 // "Cursor found, support coming later" instead of silently ignoring it.
 // Their collect() yields nothing.
 // =============================================================================

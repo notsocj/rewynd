@@ -76,11 +76,13 @@ export class SamplePicker {
       if (!this.minDate || date < this.minDate) this.minDate = date;
       if (!this.maxDate || date > this.maxDate) this.maxDate = date;
       const text = m.text!;
+      const noisy = NOISY.test(text) || text.length > 4000; // pasted logs/code, not you
       if (isBugMessage(text)) {
         bugCount++;
-        if (bugLines.length < 4) bugLines.push(clip(redact(text), 200));
+        // A pasted stack trace still counts as a bug message, but only your own words are quoted.
+        if (!noisy && bugLines.length < 4) bugLines.push(clip(redact(text), 200));
       }
-      if (NOISY.test(text) || text.length > 4000) continue; // pasted logs/code, not you
+      if (noisy) continue;
       // Keep a bounded pool per project, preferring a deterministic random spread.
       const pool = this.pools.get(project) ?? [];
       const sample = { agent: s.agent, project, date, text: clip(redact(text), MAX_CHARS) };
@@ -92,7 +94,7 @@ export class SamplePicker {
       this.pools.set(project, pool);
     }
     if (bugCount >= 3) {
-      const first = userMsgs[0];
+      const first = userMsgs.find((m) => !NOISY.test(m.text!)) ?? userMsgs[0];
       this.bugs.push({
         agent: s.agent,
         project,

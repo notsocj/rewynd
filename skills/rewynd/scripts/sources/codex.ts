@@ -27,6 +27,7 @@ import { toMs } from "../lib/time.ts";
 import { warn, errMsg } from "../lib/log.ts";
 import { categorize, categorizeCommand } from "./tool-categories.ts";
 import { newSession, type AgentAdapter, type DateRange, type Session, type AutomatedKind } from "./types.ts";
+import { typedText } from "./user-text.ts";
 
 const isRollout = (name: string) => name.startsWith("rollout-") && /\.jsonl(\.zst)?$/.test(name);
 const roots = () => [path.join(codexHome(), "sessions"), path.join(codexHome(), "archived_sessions")];
@@ -79,7 +80,7 @@ async function readRollout(file: string): Promise<Session | null> {
   let sawMeta = false;
   let prevTotal = { in: 0, out: 0 };
   // Newer Codex logs your typed text as event_msg/user_message AND as a
-  // response_item message. Prefer the event list when present (no injected text).
+  // response_item message. Prefer the event list when present (less injected text).
   const fromEvents: { at: number; text: string }[] = [];
   const fromItems: { at: number; text: string }[] = [];
 
@@ -123,7 +124,8 @@ async function readRollout(file: string): Promise<Session | null> {
     }
     if (top === "event_msg") {
       if (sub === "user_message" && typeof p.message === "string") {
-        fromEvents.push({ at, text: p.message });
+        const typed = typedText(p.message);
+        if (typed !== null) fromEvents.push({ at, text: typed });
       } else if (sub === "token_count") {
         // Codex reports a running TOTAL; we store the increase since last time.
         const t = p.info?.total_token_usage;
@@ -145,7 +147,8 @@ async function readRollout(file: string): Promise<Session | null> {
           .filter((c: any) => typeof c?.text === "string")
           .map((c: any) => c.text)
           .join("\n");
-        if (text && !INJECTED.test(text)) fromItems.push({ at, text });
+        const typed = text && !INJECTED.test(text) ? typedText(text) : null;
+        if (typed !== null) fromItems.push({ at, text: typed });
       } else if (p.role === "assistant") {
         s.messages.push({ role: "assistant", at, model });
         s.models[model] = (s.models[model] ?? 0) + 1;

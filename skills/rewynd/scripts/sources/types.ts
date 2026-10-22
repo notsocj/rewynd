@@ -68,7 +68,7 @@ export type DateRange = { from: string; to: string };
 
 export type DetectResult = {
   found: boolean;
-  /** Where the data was found (for /rewynd-status). */
+  /** Where the data was found (for /rewynd status). */
   paths: string[];
   /** Plain-language note: why it isn't found / supported, or anything odd. */
   note?: string;

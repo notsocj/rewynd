@@ -8,6 +8,10 @@ import { mergeDay } from "../skills/rewynd/scripts/store/merge.ts";
 import { setTimezone } from "../skills/rewynd/scripts/lib/time.ts";
 import { newSession, type Session } from "../skills/rewynd/scripts/sources/types.ts";
 import type { DayRecord } from "../skills/rewynd/scripts/store/day.ts";
+import { migrateFrom } from "../skills/rewynd/scripts/migrate.ts";
+import { setStateRoot } from "../skills/rewynd/scripts/lib/paths.ts";
+import path from "node:path";
+import { tempDir, writeJson } from "./helpers.ts";
 
 setTimezone("UTC");
 const T = (hhmm: string, date = "2026-10-21") => Date.parse(`${date}T${hhmm}:00Z`);
@@ -83,4 +87,20 @@ test("per agent: a new agent is added without shrinking the others", () => {
   assert.equal(day.agents["claude-code"]!.userMessages, 20);
   assert.equal(day.agents.gemini!.userMessages, 5);
   assert.equal(day.activeMinutes, 100);
+});
+
+test("migrate-data: copies days from a \"~/…\" folder exactly as `status` prints it", () => {
+  const home = tempDir();
+  const oldHome = process.env.HOME;
+  process.env.HOME = home;
+  try {
+    const day = dayWith({ "claude-code": 3 }, 30);
+    writeJson(path.join(home, ".rewynd", "data", "days", `${day.date}.json`), day);
+    setStateRoot(tempDir());
+    const r = migrateFrom("~/.rewynd/data");
+    assert.equal(r.daysRead, 1);
+  } finally {
+    process.env.HOME = oldHome;
+    setStateRoot(null);
+  }
 });

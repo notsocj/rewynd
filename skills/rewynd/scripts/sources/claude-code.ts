@@ -24,6 +24,7 @@ import { toMs } from "../lib/time.ts";
 import { warn, errMsg } from "../lib/log.ts";
 import { categorize, categorizeCommand } from "./tool-categories.ts";
 import { newSession, type AgentAdapter, type DateRange, type Session } from "./types.ts";
+import { typedText } from "./user-text.ts";
 
 const projectsDir = () => path.join(claudeHome(), "projects");
 
@@ -98,8 +99,9 @@ async function readSession(file: string): Promise<Session | null> {
       if (text === null) continue; // only tool results / images
       if (INJECTED.test(text)) continue;
       // Slash commands ("<command-name>/foo") are you, but there's no prose to count.
-      const isCommand = text.trimStart().startsWith("<command-name>");
-      s.messages.push({ role: "user", at, text: isCommand ? "" : text });
+      const typed = text.trimStart().startsWith("<command-name>") ? "" : typedText(text);
+      if (typed === null) continue; // the app wrote all of it
+      s.messages.push({ role: "user", at, text: typed });
       humanMessages++;
     } else if (r.type === "assistant" && r.message) {
       const m = r.message;
