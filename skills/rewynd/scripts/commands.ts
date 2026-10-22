@@ -7,7 +7,7 @@ import path from "node:path";
 import { outputDir, tildify } from "./lib/paths.ts";
 import { readJsonFile } from "./lib/files.ts";
 import { str } from "./lib/args.ts";
-import { validateStory } from "./story/validate-story.ts";
+import { bugNumbersFrom, validateStory } from "./story/validate-story.ts";
 import { loadPrefs, updatePrefs } from "./render/prefs.ts";
 import { loadThemes, render } from "./render/render.ts";
 import { status } from "./status.ts";
@@ -26,7 +26,8 @@ export async function runCommand(command: string, flags: Flags): Promise<unknown
       const story = readJsonFile<unknown>(path.join(outputDir(), "story.json"), null);
       if (!stats) throw new Error("output/stats.json is missing. Run `collect` first");
       if (!story) throw new Error(`output/story.json is missing or isn't valid JSON (${tildify(path.join(outputDir(), "story.json"))})`);
-      return validateStory(story, stats);
+      const samples = readJsonFile<unknown>(path.join(outputDir(), "samples.json"), null);
+      return validateStory(story, stats, bugNumbersFrom(samples));
     }
 
     case "themes":

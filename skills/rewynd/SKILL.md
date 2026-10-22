@@ -21,8 +21,8 @@ Pick the mode from the user's words or the first argument (`$ARGUMENTS`):
 
 ## Paths (work these out first)
 
-- **SKILL** = `${CLAUDE_SKILL_DIR}`: the folder this SKILL.md is in, which holds everything rewynd runs (`scripts/`, `contract/`, `video/`). If that text wasn't replaced with a real path (e.g. in Codex), SKILL is the folder containing this SKILL.md (resolve symlinks with `realpath`).
-- **DATA** = `${CLAUDE_PLUGIN_DATA}`. If that wasn't replaced with a real path (any install that isn't the Claude Code plugin), use an empty string `""`. rewynd then picks the right place itself: `~/.rewynd` for `npx skills add` installs (which keeps your history safe when the skill is updated), or the repo's `data/` in a git clone.
+- **SKILL** = `${CLAUDE_SKILL_DIR}`: the folder this SKILL.md is in, which holds everything rewynd runs (`scripts/`, `contract/`, `video/`). If you still see the literal text `${CLAUDE_SKILL_DIR}` (e.g. in Codex), don't put it in a command (the shell turns it into nothing): use the folder containing this SKILL.md instead, usually `~/.agents/skills/rewynd` (resolve symlinks with `realpath`).
+- **DATA** = `${CLAUDE_PLUGIN_DATA}`. If you still see that literal text (any install that isn't the Claude Code plugin), use an empty string `""`. rewynd then picks the right place itself: `~/.rewynd` for `npx skills add` installs (which keeps your history safe when the skill is updated), or the repo's `data/` in a git clone.
 - Every command below is:
   `node --disable-warning=ExperimentalWarning "SKILL/scripts/cli.ts" <command> --data-dir "DATA" [flags]`
   Each prints ONE JSON object on stdout. Progress goes to stderr.
@@ -39,7 +39,7 @@ Requirements: Node **22.18 or newer** (`node --version`). If it's older, tell th
 ### 2. Collect (zero tokens)
 Run `collect --month YYYY-MM` (or `--year YYYY`), adding `--github` only if the user asked for GitHub numbers.
 - This also **saves every new day** into rewynd's own `data/days/` (daily totals only, never message text). That's what keeps the year complete after agents delete old transcripts.
-- Tell the user in 2–3 lines: which agents were found (and any skipped, with the reason from `agents[].note`), how many days were saved, and the headline (hours, sessions).
+- Tell the user in 2–3 lines: which agents were found (and any skipped, with the reason from `agents[].note`), how many days were saved, and the headline (hours rounded **down** like the video, sessions). An agent with `humanSessions` 0 but `backgroundSessions` > 0 was only driven by other tools: it adds background runs, not hours.
 - If `gitGuard.ok` is false: warn loudly that their personal stats are tracked by git, and show `gitGuard.fix`. Don't run it for them.
 - Relay any `warnings` briefly.
 - If `headline.sessions` is 0: say there's nothing to recap for that period yet (and suggest another month), then stop.
@@ -58,33 +58,33 @@ Write exactly this shape (`contract/recap.ts` → `Story` is the source of truth
 ```json
 {
   "schemaVersion": 1,
-  "personality": { "id": "3am-shipper", "title": "The 3AM Shipper", "line": "46 sessions after midnight. Sleep is a suggestion." },
+  "personality": { "id": "3am-shipper", "title": "The 3AM Shipper", "line": "38 sessions after midnight. Sleep is a suggestion." },
   "captions": {
     "intro": "Your October in AI coding",
     "hours": "That's a part-time job you didn't apply for",
     "mainAI": "You cheated on Claude Code with Codex 20 times",
-    "heatmap": "22 days in a row. Touch grass?",
-    "peakHour": "Peak focus: 2AM",
+    "heatmap": "17 days in a row. Touch grass?",
+    "peakHour": "Peak focus: 1AM",
     "projects": "lumen ate most of your month",
     "tools": "Mostly running commands",
     "shipped": "Most of your commits had an AI co-author"
   },
   "projects": [{ "name": "lumen", "line": "Mostly fighting auth" }],
   "hardestBug": { "project": "lumen", "line": "A login loop that took 40 messages to kill" },
-  "funnyLines": ["You said \"why\" 125 times."],
-  "backgroundLine": "Codex double-checked itself 236 times.",
+  "funnyLines": ["You said \"why\" 88 times."],
+  "backgroundLine": "Codex double-checked itself 180 times.",
   "closing": "See you next month."
 }
 ```
 
 Rules (the script checks them in step 5):
-- **Only use numbers that exist in `stats.json`.** Never invent or estimate. For hours, use whole hours rounded **down** (`floor(totals.activeMinutes / 60)`, e.g. 5,172 minutes → "86 hours"), which is what the video shows.
+- **Only use numbers that exist in `stats.json`.** Never invent or estimate. (One exception: `hardestBug.line` may also use its candidate's `bugMessages` or `userMessages` from `samples.json`.) For hours, use whole hours rounded **down** (`floor(totals.activeMinutes / 60)`, e.g. 5,172 minutes → "86 hours"), which is what the video shows.
 - **personality.id** must be one of: `3am-shipper, rewriter, polite-one, speedrunner, bug-whisperer, architect, juggler, marathoner, weekend-warrior`. Usually take `personalityHints[0]`. Pick from the top 3 only if the samples clearly fit another one better. `title` = the standard title for that id.
 - Keep text short. Captions ≤ 70 characters, `personality.line` ≤ 110, funny lines ≤ 90. Each one should read in about 2 seconds.
 - **Tone:** a playful roast, never mean. No swearing at the user.
 - **Never** quote anything that looks like a secret, a private person's name, an email, or client details. Paraphrase.
 - `projects`: up to 3, using names from `stats.projects`.
-- `hardestBug`: from `samples.json → bugCandidates` (the one with the most bug messages). Say what the bug was about in one line. Use `null` if there are no candidates or no consent.
+- `hardestBug`: from `samples.json → bugCandidates` (the first one has the most bug messages). Say what the bug was about in one line, from its `firstMessage` and `bugLines`; "took N messages" uses its `bugMessages`. If they don't say what the bug was, pick the next candidate. Use `null` if there are no candidates or no consent.
 - `funnyLines`: 1–3 lines built from `phrases`, `time.lateNightSessions`, `agentSwitches`, `longestSession`, `shipped`...
 - `backgroundLine`: if `backgroundRuns.total > 0`, one joke built from its real counts (e.g. Codex `review` → "Codex double-checked itself N times"; `subagent` → "Your agents spun up N little helpers"). Otherwise `null`.
 - `mainAI` caption only matters with 2+ agents. Prefer `agentSwitches.topSwitch` ("You cheated on X with Y N times").
@@ -96,8 +96,8 @@ Run `story-check`. If `ok` is false, fix every listed error in `story.json` and 
 
 ### 6. Design choices
 Run `prefs`.
-- If `prefs.design` is `null` (first time), ask these questions in **one** prompt (multiple-choice where the tool allows it):
-  1. **Template**: "Auto (matches your personality)" plus each template from the `themes` command (`label` + `description`): Tape, Terminal, Receipt, Arcade. Then, unless they picked Auto, ask which of that template's 3 `accents` they want (show each `label`).
+- If `prefs.design` is `null` (first time), run `themes`, then ask these questions in **one** prompt (multiple-choice where the tool allows it):
+  1. **Template**: "Auto (matches your personality)" plus each template from `themes` (`label` + `description`): Tape, Terminal, Receipt, Arcade. If they pick one (not Auto), ask one follow-up: which of that template's 3 `accents` (show each `label`).
   2. **Font**: Inter (default) or "My own font" (ask for the path to a .ttf / .otf / .woff2 file on their machine).
   3. **Format**: Vertical 9:16 (TikTok / Reels / Stories, default) · Wide 16:9 (X / YouTube) · Both.
   4. **Show project names?** Ask only if `stats.projects` isn't empty: "Yes" or "Hide them (Project A / B / C)". Project names can give away client work.
@@ -107,7 +107,7 @@ Run `prefs`.
 
 ### 7. Render (zero tokens)
 Run `render` (add `--format wide|both` only if they want to override the saved format just this once).
-- The **first** render installs the video template's dependencies and a headless browser (one-time download, about 1–2 minutes). Say so before you start. After that it works offline.
+- The **first** render installs the video template's dependencies and a headless browser (a one-time download of a few hundred MB, 1–2 minutes; again after rewynd is updated). Say so before you start. After that it works offline.
 - If the result has `storyErrors`, go back to step 5.
 - Report the file path(s) from `files`. On macOS offer to open it (`open "<file>"`).
 

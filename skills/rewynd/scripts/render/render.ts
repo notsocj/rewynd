@@ -29,7 +29,7 @@ import { VIDEO_DIR, exists, outputDir } from "../lib/paths.ts";
 import { readJsonFile, writeJsonAtomic } from "../lib/files.ts";
 import { info } from "../lib/log.ts";
 import { periodSlug } from "../stats/period.ts";
-import { validateStory } from "../story/validate-story.ts";
+import { bugNumbersFrom, validateStory } from "../story/validate-story.ts";
 import { loadPrefs } from "./prefs.ts";
 
 /** Composition ids registered in video/src/Root.tsx. */
@@ -159,7 +159,7 @@ export function buildProps(opts: RenderOptions): { props: RecapProps; errors: st
   if (!stats) throw new Error("output/stats.json is missing. Run `collect` first");
   const story = readJsonFile<Story | null>(path.join(outputDir(), "story.json"), null);
   if (!story) throw new Error("output/story.json is missing. Claude writes it in the /rewynd skill");
-  const check = validateStory(story, stats);
+  const check = validateStory(story, stats, bugNumbersFrom(readJsonFile<unknown>(path.join(outputDir(), "samples.json"), null)));
   if (!check.ok) return { props: null as unknown as RecapProps, errors: check.errors };
 
   const design = { ...DEFAULT_PREFS, ...(loadPrefs().design ?? {}) };

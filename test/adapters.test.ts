@@ -24,6 +24,8 @@ test("Claude Code: human messages, deduped replies, tools, tokens, sub-agents", 
     { type: "queue-operation", operation: "enqueue", timestamp: "2026-10-21T01:00:00Z" },
     { ...base, type: "user", timestamp: "2026-10-21T01:00:00Z", origin: { kind: "human" }, message: { role: "user", content: "please fix it, still broken" } },
     { ...base, type: "user", timestamp: "2026-10-21T01:00:01Z", isMeta: true, message: { role: "user", content: "<system-reminder>x</system-reminder>" } },
+    { ...base, type: "user", timestamp: "2026-10-21T01:00:02Z", origin: { kind: "human" }, message: { role: "user", content: '<artifact-view-context artifact="a1">\n{"why":"why"}\n</artifact-view-context>\n\nmake it blue' } },
+    { ...base, type: "user", timestamp: "2026-10-21T01:00:03Z", origin: { kind: "human" }, message: { role: "user", content: "<artifact-content-authored-by-others>\nwhy why why\n" } },
     // One reply split over two records with the same message.id → counted once.
     { ...base, type: "assistant", timestamp: "2026-10-21T01:00:05Z", message: { id: "m1", model: "claude-opus-5-5", role: "assistant", content: [{ type: "thinking", thinking: "" }], usage: { input_tokens: 10, cache_read_input_tokens: 90, output_tokens: 5 } } },
     { ...base, type: "assistant", timestamp: "2026-10-21T01:00:06Z", message: { id: "m1", model: "claude-opus-5-5", role: "assistant", content: [{ type: "tool_use", id: "t1", name: "Bash", input: { command: "rg foo" } }], usage: { input_tokens: 10, output_tokens: 5 } } },
@@ -37,7 +39,7 @@ test("Claude Code: human messages, deduped replies, tools, tokens, sub-agents", 
   const main = sessions.find((s) => s.id === "s1")!;
   assert.equal(main.origin, "human");
   assert.equal(main.cwd, "/tmp/lumen");
-  assert.equal(main.messages.filter((m) => m.role === "user").length, 1);
+  assert.deepEqual(main.messages.filter((m) => m.role === "user").map((m) => m.text), ["please fix it, still broken", "make it blue"]);
   assert.equal(main.messages.filter((m) => m.role === "assistant").length, 2);
   assert.deepEqual(main.toolCalls.map((t) => t.category), ["search", "edit"]);
   assert.equal(main.usage[0].tokensIn, 100); // input + cache read
@@ -80,6 +82,30 @@ test("Codex: plain + zstd rollouts, guardian reviews, exec code-mode tools, toke
   const g1 = sessions.find((s) => s.id === "g1")!;
   assert.equal(g1.origin, "automated");
   assert.equal(g1.automatedKind, "review");
+  delete process.env.CODEX_HOME;
+});
+
+test("Codex: app-added text isn't you; a session of only app messages is a background run", async () => {
+  const home = tempDir();
+  process.env.CODEX_HOME = home;
+  const day = path.join(home, "sessions", "2026", "10", "21");
+  const meta = (id: string) => ({ timestamp: "2026-10-21T04:00:00Z", type: "session_meta", payload: { id, cwd: "/tmp/lumen", thread_source: "user" } });
+  const said = (at: string, message: string) => ({ timestamp: at, type: "event_msg", payload: { type: "user_message", message } });
+  writeJsonl(path.join(day, "rollout-2026-10-21T04-00-00-c2.jsonl"), [
+    meta("c2"),
+    said("2026-10-21T04:00:01Z", "<skill>\n<name>animate</name>\nWhy? Fix it.\n</skill>"),
+    said("2026-10-21T04:00:02Z", "# Files mentioned by the user:\n\n## shot.png: /Users/jane/Desktop/shot.png\n\n## My request for Codex:\nwhy is it blank"),
+  ]);
+  writeJsonl(path.join(day, "rollout-2026-10-21T04-10-00-c3.jsonl"), [
+    meta("c3"),
+    said("2026-10-21T04:10:01Z", "<heartbeat>\n<automation_id>nightly</automation_id>\n</heartbeat>"),
+    { timestamp: "2026-10-21T04:10:02Z", type: "response_item", payload: { type: "function_call", name: "exec_command", arguments: "{}" } },
+  ]);
+  const sessions = await all(codex.collect(RANGE));
+  const c2 = sessions.find((s) => s.id === "c2")!;
+  assert.deepEqual(c2.messages.filter((m) => m.role === "user").map((m) => m.text), ["why is it blank"]);
+  const c3 = sessions.find((s) => s.id === "c3")!;
+  assert.equal(c3.origin, "automated");
   delete process.env.CODEX_HOME;
 });
 

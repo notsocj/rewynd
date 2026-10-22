@@ -8,6 +8,7 @@
 //   • length: captions short enough to read in ~2 seconds
 //   • honesty: every number in the text must exist in stats.json (in some
 //     natural form: 1,234 / 81% / 3AM / 33 hours...). Invented numbers fail.
+//     The hardest-bug line may also use its session's counts from samples.json.
 // Errors are returned as plain sentences so the skill can fix and retry.
 // =============================================================================
 
@@ -17,7 +18,11 @@ export type StoryCheck = { ok: boolean; errors: string[]; warnings: string[] };
 
 const LIMITS = { caption: 70, personalityLine: 110, funnyLine: 90, projectLine: 80, closing: 90, bugLine: 110 };
 
-export function validateStory(story: any, stats: Stats): StoryCheck {
+/**
+ * `bugNumbers`: the counts in samples.json → bugCandidates ("took 47 messages
+ * to kill"). Allowed in hardestBug.line only, since that's where they belong.
+ */
+export function validateStory(story: any, stats: Stats, bugNumbers: number[] = []): StoryCheck {
   const errors: string[] = [];
   const warnings: string[] = [];
   const isStr = (v: unknown): v is string => typeof v === "string" && v.trim().length > 0;
@@ -67,9 +72,11 @@ export function validateStory(story: any, stats: Stats): StoryCheck {
 
   // --- honesty: numbers must come from stats.json ---
   const known = knownNumbers(stats);
+  const bugKnown = new Set([...known, ...bugNumbers]);
   for (const t of texts) {
+    const ok = t.where === "hardestBug.line" ? bugKnown : known;
     for (const n of numbersIn(t.text)) {
-      if (!known.has(n)) errors.push(`${t.where}: the number ${n} isn't in stats.json. Use only real numbers`);
+      if (!ok.has(n)) errors.push(`${t.where}: the number ${n} isn't in stats.json${ok === bugKnown ? " or the bug candidates in samples.json" : ""}. Use only real numbers`);
     }
   }
 
@@ -87,6 +94,12 @@ export function validateStory(story: any, stats: Stats): StoryCheck {
   });
 
   return { ok: errors.length === 0, errors, warnings };
+}
+
+/** The numbers validateStory accepts in hardestBug.line, from a parsed samples.json (or null). */
+export function bugNumbersFrom(samples: any): number[] {
+  const list = Array.isArray(samples?.bugCandidates) ? samples.bugCandidates : [];
+  return list.flatMap((b: any) => [b?.bugMessages, b?.userMessages]).filter((n: unknown): n is number => typeof n === "number");
 }
 
 /** Numbers written in a text: "1,234" → 1234, "81%" → 81, "3AM" → 3, "33.5" → 33.5. */

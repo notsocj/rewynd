@@ -1,7 +1,7 @@
 // =============================================================================
 // status.ts — what rewynd has saved, what's still on disk, and what's at risk.
 //
-// Powers /rewynd-status and /rewynd-setup. Runs a save first (so the answer
+// Powers /rewynd status and /rewynd setup. Runs a save first (so the answer
 // is current), then reports:
 //   • each agent: found? where? supported?
 //   • saved days: how many, first/last, gaps in the last 90 days
@@ -77,7 +77,7 @@ function claudeRetention() {
     oldestTranscript: oldest,
     oldestDeletedOn: deletesOn,
     daysUntilNextDeletion: deletesOn ? Math.max(0, daysBetween(today(), deletesOn)) : null,
-    advice: `Run /rewynd (or /rewynd-status) at least once every ${days} days so no day is lost. rewynd never changes this setting.`,
+    advice: `Run /rewynd (or /rewynd status) at least once every ${days} days so no day is lost. rewynd never changes this setting.`,
   };
 }
 

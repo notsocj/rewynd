@@ -4,7 +4,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { redact } from "../skills/rewynd/scripts/samples/redact.ts";
 import { categorize, categorizeCommand } from "../skills/rewynd/scripts/sources/tool-categories.ts";
-import { numbersIn, validateStory } from "../skills/rewynd/scripts/story/validate-story.ts";
+import { bugNumbersFrom, numbersIn, validateStory } from "../skills/rewynd/scripts/story/validate-story.ts";
+import { typedText } from "../skills/rewynd/scripts/sources/user-text.ts";
 import { parsePeriod, previousPeriod } from "../skills/rewynd/scripts/stats/period.ts";
 import { resolveTheme, loadThemes } from "../skills/rewynd/scripts/render/render.ts";
 import { DEFAULT_PREFS } from "../skills/rewynd/contract/recap.ts";
@@ -63,12 +64,12 @@ function fakeStats(): Stats {
     totals: { sessions: 300, userMessages: 2707, toolCalls: 47098, tokensIn: 1, tokensOut: 1, activeMinutes: 5160, activeHours: 86, activeDays: 22 },
     byAgent: {}, mainAgent: "claude-code",
     agentShare: [{ agent: "claude-code", share: 0.62, percent: 62 }, { agent: "codex", share: 0.38, percent: 38 }],
-    agentSwitches: { sameDay: 21, sameProject: 26, topSwitch: { from: "claude-code", to: "codex", count: 41 } },
+    agentSwitches: { sameDay: 14, sameProject: 19, topSwitch: { from: "claude-code", to: "codex", count: 41 } },
     backgroundRuns: { total: 702, byAgent: { codex: { review: 702, subagent: 0, other: 0 } } },
-    projects: [{ name: "lumen", sessions: 5, minutes: 2372, agents: ["claude-code"] }],
+    projects: [{ name: "lumen", sessions: 5, minutes: 1840, agents: ["claude-code"] }],
     tools: [], models: [],
-    time: { busiestDay: { date: "2026-10-21", minutes: 700 }, busiestHour: 2, hours: new Array(24).fill(0), weekdays: new Array(7).fill(0), lateNightSessions: 46, longestStreakDays: 22, heatmap: [] },
-    phrases: { please: 52, thanks: 17, fixIt: 67, stillBroken: 1, why: 125, sorry: 25 },
+    time: { busiestDay: { date: "2026-10-21", minutes: 700 }, busiestHour: 2, hours: new Array(24).fill(0), weekdays: new Array(7).fill(0), lateNightSessions: 38, longestStreakDays: 17, heatmap: [] },
+    phrases: { please: 31, thanks: 12, fixIt: 44, stillBroken: 3, why: 88, sorry: 9 },
     longestSession: null, personalityHints: [], shipped: null,
     previous: { label: "September 2026", shortLabel: "SEP", activeMinutes: 4260, sessions: 251, changePct: 21 },
   };
@@ -76,11 +77,11 @@ function fakeStats(): Stats {
 
 const goodStory = {
   schemaVersion: 1,
-  personality: { id: "3am-shipper", title: "The 3AM Shipper", line: "46 sessions after midnight. Sleep is a suggestion." },
+  personality: { id: "3am-shipper", title: "The 3AM Shipper", line: "38 sessions after midnight. Sleep is a suggestion." },
   captions: { hours: "86 hours with AI this month", mainAI: "You cheated on Claude Code with Codex 41 times" },
   projects: [{ name: "lumen", line: "lumen: mostly fighting auth" }],
   hardestBug: null,
-  funnyLines: ["You said 'why' 125 times.", "Up 21% on September."],
+  funnyLines: ["You said 'why' 88 times.", "Up 21% on September."],
   backgroundLine: "Codex double-checked itself 702 times.",
   closing: "See you next month.",
 };
@@ -97,6 +98,37 @@ test("story check: invented numbers, unknown personality and long captions fail"
   assert.ok(r.errors.some((e) => e.includes("9999")));
   assert.ok(r.errors.some((e) => e.includes("personality.id")));
   assert.ok(r.errors.some((e) => e.includes("characters")));
+});
+
+test("story check: the hardest-bug line may use its session's counts from samples.json, nothing else may", () => {
+  const story = { ...goodStory, hardestBug: { project: "lumen", line: "A login loop that took 57 messages to kill" }, funnyLines: ["57 messages about one bug."] };
+  const bugs = bugNumbersFrom({ bugCandidates: [{ bugMessages: 57, userMessages: 140 }] });
+  const r = validateStory(story, fakeStats(), bugs);
+  assert.ok(!r.errors.some((e) => e.startsWith("hardestBug.line")), r.errors.join("\n"));
+  assert.ok(r.errors.some((e) => e.startsWith("funnyLines[0]") && e.includes("57")));
+  assert.ok(validateStory(story, fakeStats()).errors.some((e) => e.startsWith("hardestBug.line")), "without samples.json the number is unknown");
+});
+
+test("typed text: the app's wrappers are peeled off, app-only messages are dropped", () => {
+  // Claude desktop: page context before your text.
+  assert.equal(typedText('<artifact-view-context artifact="a1">\n{"mode":"canvas"}\n</artifact-view-context>\n\nmake the header smaller'), "make the header smaller");
+  // A paste, then your words.
+  assert.equal(typedText('<pasted_content id="p1">\nTypeError: x is undefined\n</pasted_content id="p1">\n\nwhy does this happen'), "why does this happen");
+  // Codex IDE preamble: only the request is yours.
+  assert.equal(typedText("# Files mentioned by the user:\n\n## shot.png: /Users/jane/Desktop/shot.png\n\n## My request for Codex:\nfix the login page\n"), "fix the login page");
+  assert.equal(typedText("# Files mentioned by the user:\n\n## notes.md: /tmp/notes.md\n"), "");
+  // Codex in-app browser context.
+  assert.equal(typedText('<in-app-browser-context tab="1">\n# In app browser:\nlocalhost:3000\n</in-app-browser-context>\n\n## My request:\nwhy is the button grey'), "why is the button grey");
+  // Wholly the app's: an attached skill, a page it opened, a scheduled heartbeat.
+  assert.equal(typedText("<skill>\n<name>animate</name>\n---\nWhy animate? Fix it with springs.\n</skill>"), null);
+  assert.equal(typedText('<external_codex_apps_open_page>{"page_id":null}</external_codex_apps_open_page>'), null);
+  assert.equal(typedText("<heartbeat>\n<automation_id>a</automation_id>\n</heartbeat>"), null);
+  // You, but no prose.
+  assert.equal(typedText("<bash-input>git status</bash-input><bash-stdout>clean</bash-stdout>"), "");
+  // Attached images keep no file name.
+  assert.equal(typedText('look at this <image name=[Image #1] path="/Users/jane/Desktop/jane-passport.png"></image> why'), "look at this [image] why");
+  // Plain text is untouched.
+  assert.equal(typedText("please fix it"), "please fix it");
 });
 
 test("periods and percentages", () => {

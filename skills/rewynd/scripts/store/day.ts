@@ -19,8 +19,10 @@ export const DAY_SCHEMA_VERSION = 1;
  * Bump it when a fix changes how days are computed. Saved days made by older
  * rules are then recomputed, but only where every agent's logs for that day
  * are still on disk. Days whose logs are gone keep their saved numbers.
+ *   2: text the desktop apps wrap around your messages (attached skills, page
+ *      context, file lists) no longer counts as you (sources/user-text.ts).
  */
-export const ALGO_VERSION = 1;
+export const ALGO_VERSION = 2;
 
 /** One agent's numbers for one day. Human sessions only, except `automated`. */
 export type AgentDay = {
