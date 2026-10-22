@@ -50,9 +50,12 @@ jobs:
       - name: Type check (scripts)
         run: npm run typecheck
 
+      # Same as rewynd's first render: `npm ci`, and if an older npm (npm 10,
+      # bundled with Node 22) refuses the lockfile, a normal install.
       - name: Install video template
         working-directory: skills/rewynd/video
-        run: npm ci --no-audit --no-fund
+        shell: bash
+        run: npm ci --no-audit --no-fund || { echo "::warning::npm ci refused the lockfile on Node ${{ matrix.node }}; falling back to npm install"; npm install --no-audit --no-fund; }
 
       - name: Type check (video template)
         working-directory: skills/rewynd/video

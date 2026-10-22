@@ -216,12 +216,13 @@ export function ensureVideoDeps(): void {
   // half-finished or badly copied install must trigger a clean reinstall.
   if (exists(REMOTION_CLI()) && exists(path.join(VIDEO_DIR, "node_modules", "@remotion", "cli", "dist", "index.js"))) return;
   info("First render: installing the video template's dependencies (one-time, needs internet)…");
-  const lock = exists(path.join(VIDEO_DIR, "package-lock.json"));
-  const r = spawnSync("npm", [lock ? "ci" : "install", "--no-audit", "--no-fund"], {
-    cwd: VIDEO_DIR,
-    stdio: ["ignore", 2, 2],
-    shell: process.platform === "win32",
-  });
+  const npm = (args: string[]) =>
+    spawnSync("npm", [...args, "--no-audit", "--no-fund"], { cwd: VIDEO_DIR, stdio: ["ignore", 2, 2], shell: process.platform === "win32" });
+  // `npm ci` installs exactly what the lockfile says (reproducible renders).
+  // Older npm versions (npm 10, bundled with Node 22) sometimes refuse a
+  // lockfile written by a newer npm; then a normal install still works.
+  let r = exists(path.join(VIDEO_DIR, "package-lock.json")) ? npm(["ci"]) : null;
+  if (!r || r.status !== 0) r = npm(["install"]);
   if (r.status !== 0) throw new Error("couldn't install the video template's dependencies (npm failed, see above)");
 }
 
