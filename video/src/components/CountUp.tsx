@@ -10,6 +10,7 @@
 
 import React from "react";
 import { Easing, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import { CLAMP, EASE_OUT } from "./motion";
 import type { FontSpec } from "../fonts";
 
 // Thousands separators, always in US format so videos look the same everywhere.
@@ -59,6 +60,11 @@ export const CountUp: React.FC<Props> = ({ value, font, fontSize, color, textSha
     config: { damping: 9, mass: 0.5, stiffness: 180 },
   });
   const punch = 1 + 0.04 * Math.sin(Math.PI * Math.min(land, 1));
+  // ...and the signal "splits": red and cyan copies jump out sideways and
+  // snap back over ~1/3 s, like a VHS picture catching up. Ease-out, so the
+  // biggest split is right on the landing frame.
+  const split = interpolate(frame, [delay + fps, delay + fps + 10], [1, 0], { ...CLAMP, easing: EASE_OUT });
+  const chroma = split > 0 ? `${-10 * split}px 0 rgba(255,59,48,${0.85 * split}), ${10 * split}px 0 rgba(0,229,255,${0.85 * split})` : "";
 
   return (
     <span
@@ -71,7 +77,9 @@ export const CountUp: React.FC<Props> = ({ value, font, fontSize, color, textSha
         letterSpacing: font.heroTracking,
         fontVariantNumeric: "tabular-nums",
         color,
-        textShadow,
+        // "none" can't be part of a shadow list (it would void the whole
+        // value), so drop it before joining.
+        textShadow: [chroma, textShadow].filter((x) => x && x !== "none").join(", ") || undefined,
         scale: punch,
         transformOrigin: "left bottom",
       }}

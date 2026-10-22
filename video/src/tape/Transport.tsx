@@ -5,9 +5,16 @@
 // tells the viewer what's happening. Stat cards show PLAY, the personality
 // reveal shows REC ("this is you, on tape"), the outro shows STOP, and the
 // rewind glitch at the start of each scene shows REW.
+//
+// Motion: when the glitch ends, the card's button (PLAY, REC or STOP)
+// physically presses in: it dips to 92% and springs back as it lights up,
+// like a real deck's button being pushed. That's the moment the tape "starts".
 
-import React from "react";
+import React, { useContext } from "react";
+import { interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import { CLAMP, GLITCH_FRAMES, SPRING } from "../components/motion";
 import { useRecap } from "../recap/context";
+import { RewindingContext } from "./RewindGlitch";
 import { PlayIcon, RecIcon, RewindIcon, StopIcon } from "./Icons";
 import { frameFor } from "./layout";
 
@@ -21,8 +28,13 @@ const buttons: { id: TransportButton; label: string; Icon: typeof PlayIcon }[] =
 ];
 
 export const Transport: React.FC<{ active: TransportButton }> = ({ active }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
   const { theme, font, wide, s } = useRecap();
   const f = frameFor(wide);
+  const rewinding = useContext(RewindingContext);
+  // 0 → 1 as the card's own button is pushed, right after the glitch.
+  const press = rewinding ? 1 : spring({ frame: frame - GLITCH_FRAMES, fps, config: SPRING.snappy });
 
   return (
     <div
@@ -38,6 +50,8 @@ export const Transport: React.FC<{ active: TransportButton }> = ({ active }) => 
     >
       {buttons.map(({ id, label, Icon }) => {
         const on = id === active;
+        // The pushed button dips in, then springs back to full size.
+        const dip = on ? interpolate(press, [0, 0.35, 1], [1, 0.92, 1], CLAMP) : 1;
         // The REC icon stays red even on the pressed button: red means record.
         const iconColor = id === "rec" ? theme.rec : on ? theme.bg : theme.fg;
         return (
@@ -51,7 +65,8 @@ export const Transport: React.FC<{ active: TransportButton }> = ({ active }) => 
               background: on ? theme.fg : "transparent",
               color: on ? theme.bg : theme.fg,
               // Unpressed buttons step back so the pressed one reads first.
-              opacity: on ? 1 : 0.45,
+              opacity: on ? interpolate(press, [0, 0.35], [0.45, 1], CLAMP) : 0.45,
+              scale: dip,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",

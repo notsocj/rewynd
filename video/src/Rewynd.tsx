@@ -18,6 +18,7 @@ import type { RecapProps } from "../../contract/recap";
 import { RecapProvider } from "./recap/context";
 import { SCENES, sceneFrames, totalFrames } from "./scenes/registry";
 import type { SingleSceneProps } from "./schema";
+import { CameraContext, seedOf } from "./tape/Camera";
 import { RewindGlitch } from "./tape/RewindGlitch";
 
 // "vertical" → 1080×1920, "wide" → 1920×1080. "both" is split into two
@@ -42,14 +43,20 @@ export const Rewynd: React.FC<RecapProps> = (props) => {
     <RecapProvider props={props}>
       <AbsoluteFill style={{ backgroundColor: "#000" }}>
         <Series>
-          {props.scenes.map((id) => {
+          {props.scenes.map((id, i) => {
             const Scene = SCENES[id].component;
+            const frames = sceneFrames(id);
             return (
-              <Series.Sequence key={id} durationInFrames={sceneFrames(id)} name={id}>
-                {/* Different seed per scene so each glitch looks different. */}
-                <RewindGlitch seed={id}>
-                  <Scene />
-                </RewindGlitch>
+              <Series.Sequence key={id} durationInFrames={frames} name={id}>
+                {/* The camcorder drift is on in the video (off on the share card). */}
+                <CameraContext.Provider value={{ on: true, sceneFrames: frames, seed: seedOf(id) }}>
+                  {/* Different seed per scene so each glitch looks different.
+                      The first scene starts with PLAY; the last one ends with
+                      the CRT switch-off instead of a tracking slip. */}
+                  <RewindGlitch seed={id} sceneFrames={frames} first={i === 0} last={i === props.scenes.length - 1}>
+                    <Scene />
+                  </RewindGlitch>
+                </CameraContext.Provider>
               </Series.Sequence>
             );
           })}
@@ -78,11 +85,14 @@ export const RewyndCard: React.FC<RecapProps> = (props) => {
 
 export const SingleScene: React.FC<SingleSceneProps> = ({ recap, scene }) => {
   const Scene = SCENES[scene].component;
+  const frames = sceneFrames(scene);
   return (
     <RecapProvider props={recap}>
-      <RewindGlitch seed={scene}>
-        <Scene />
-      </RewindGlitch>
+      <CameraContext.Provider value={{ on: true, sceneFrames: frames, seed: seedOf(scene) }}>
+        <RewindGlitch seed={scene} sceneFrames={frames}>
+          <Scene />
+        </RewindGlitch>
+      </CameraContext.Provider>
     </RecapProvider>
   );
 };

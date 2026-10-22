@@ -1,6 +1,6 @@
 // The frame every scene is built on. Back to front:
 // 1. the full-bleed background color (the "color field")
-// 2. the scene's own content
+// 2. the scene's own content, inside the handheld camera (see Camera.tsx)
 // 3. the camcorder OSD at the top (REC + tape counter)
 // 4. the transport buttons and the footer at the bottom
 // 5. scan lines over everything
@@ -10,6 +10,7 @@
 
 import React, { useContext } from "react";
 import { AbsoluteFill } from "remotion";
+import { Camera } from "./Camera";
 import { useRecap } from "../recap/context";
 import { Footer } from "./Footer";
 import { Osd } from "./Osd";
@@ -37,7 +38,9 @@ export const TapeCard: React.FC<Props> = ({ counter, active = "play", children }
         overflow: "hidden",
       }}
     >
-      {children}
+      {/* Only the content is "filmed" (drifts with the camera); the
+          chrome below stays locked like a viewfinder overlay. */}
+      <Camera>{children}</Camera>
       <Osd counter={counter} />
       <Transport active={rewinding ? "rew" : active} />
       <Footer />

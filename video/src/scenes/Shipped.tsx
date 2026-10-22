@@ -7,7 +7,9 @@
 // Handles "nothing shipped" (no repos or 0 commits) with a friendly line.
 
 import React from "react";
+import { useCurrentFrame, useVideoConfig } from "remotion";
 import { Appear } from "../components/Appear";
+import { countProgress } from "../components/CountUp";
 import { num, plural, shortDay } from "../components/format";
 import { Caption, Hero } from "../components/Hero";
 import { useRecap } from "../recap/context";
@@ -16,7 +18,14 @@ import { TapeCard } from "../tape/TapeCard";
 import { terminalInner, TermList } from "../tape/TermList";
 import { TerminalWindow, TypedPrompt } from "../tape/Terminal";
 
+// When the +added / −removed line prints (frames into the scene).
+const DIFF_AT = 44;
+
 const Repos: React.FC = () => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  // The diff counts up like `git diff --stat` crunching, landing on the real totals.
+  const diff = countProgress(frame, fps, DIFF_AT);
   const { props, theme, font, s, name, wide } = useRecap();
   const width = useSlotWidth();
   const shipped = props.stats.shipped;
@@ -38,7 +47,7 @@ const Repos: React.FC = () => {
       </div>
       {shipped && (shipped.linesAdded > 0 || shipped.linesRemoved > 0) ? (
         // The diff, in git's colors, as the last line of output.
-        <Appear delay={44}>
+        <Appear delay={DIFF_AT}>
           <div
             style={{
               marginTop: 28 * s,
@@ -54,8 +63,8 @@ const Repos: React.FC = () => {
               fontVariantNumeric: "tabular-nums",
             }}
           >
-            <span style={{ color: theme.add }}>+{num(shipped.linesAdded)}</span>
-            <span style={{ color: theme.del }}>−{num(shipped.linesRemoved)}</span>
+            <span style={{ color: theme.add }}>+{num(Math.round(shipped.linesAdded * diff))}</span>
+            <span style={{ color: theme.del }}>−{num(Math.round(shipped.linesRemoved * diff))}</span>
             <span style={{ fontSize: 32 * s, fontWeight: 700, color: theme.panelDim, letterSpacing: 0 }}>lines</span>
           </div>
         </Appear>

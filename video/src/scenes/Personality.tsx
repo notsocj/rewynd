@@ -4,7 +4,8 @@
 // pressed ("this is you, on tape"), and the name lands below.
 
 import React from "react";
-import { interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import { CLAMP, EASE_OUT, SPRING } from "../components/motion";
 import { PERSONALITIES } from "../../../contract/recap";
 import { Appear } from "../components/Appear";
 import { stampDay } from "../components/format";
@@ -27,6 +28,14 @@ const Shot: React.FC = () => {
   // slapped onto a jacket.
   const pop = spring({ frame: frame - 14, fps, config: { damping: 11, mass: 0.8 } });
   const badgeW = 420 * s;
+  // Focus pull: the badge starts out of focus and sharpens as the viewfinder
+  // brackets snap in, like the camcorder finding its subject.
+  const blur = interpolate(frame, [14, 30], [14, 0], { ...CLAMP, easing: EASE_OUT });
+  // Once it has landed, the pin floats a little, so the screenshot moment
+  // still breathes (slow sines, a few px, never a big wobble).
+  const t = Math.max(0, frame - 30) / fps;
+  const floatY = 8 * Math.sin(t * 2.1) * Math.min(1, t * 2);
+  const floatR = 1.2 * Math.sin(t * 1.5) * Math.min(1, t * 2);
 
   return (
     <Viewfinder
@@ -42,9 +51,11 @@ const Shot: React.FC = () => {
           height: badgeW * (520 / 420),
           // Leave room for the date stamp under the badge.
           marginBottom: 60 * s,
-          scale: interpolate(pop, [0, 1], [0.4, 1]),
-          rotate: `${interpolate(pop, [0, 1], [-12, 0])}deg`,
+          scale: interpolate(pop, [0, 1], [0.6, 1]),
+          rotate: `${interpolate(pop, [0, 1], [-12, 0]) + floatR}deg`,
+          translate: `0 ${floatY}px`,
           opacity: interpolate(pop, [0, 0.2], [0, 1], { extrapolateRight: "clamp" }),
+          filter: blur > 0.1 ? `blur(${blur}px)` : undefined,
         }}
       >
         <Badge personality={props.story.personality.id} />
@@ -53,7 +64,14 @@ const Shot: React.FC = () => {
   );
 };
 
+// The title doesn't fade in: it's STAMPED. It drops from 115% to 100% on a
+// snappy spring, right as the camera flash fires.
+const TITLE_AT = 34;
+
 const Reveal: React.FC = () => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const stamp = spring({ frame: frame - TITLE_AT, fps, config: SPRING.snappy });
   const { props, theme, font, s, wide, text } = useRecap();
   const p = props.story.personality;
   const title = p.title || PERSONALITIES[p.id]?.title || "The Coder";
@@ -63,9 +81,11 @@ const Reveal: React.FC = () => {
       <Appear delay={28}>
         <div style={{ fontSize: 40 * s, fontWeight: 700, color: theme.dim }}>// my coder personality</div>
       </Appear>
-      <Appear delay={34} distance={30}>
+      <Appear delay={TITLE_AT} distance={0}>
         <div
           style={{
+            scale: interpolate(stamp, [0, 1], [1.15, 1]),
+            transformOrigin: wide ? "left center" : "center",
             marginTop: 14 * s,
             // Long titles step down a size instead of overflowing.
             fontSize: (title.length > 18 ? 92 : 112) * s,
@@ -84,9 +104,19 @@ const Reveal: React.FC = () => {
   );
 };
 
+// A camera flash: the whole picture blows out white for an instant as the
+// title lands, then fades fast (ease-out). This is the one "photo moment"
+// of the video, the frame people screenshot.
+const Flash: React.FC = () => {
+  const frame = useCurrentFrame();
+  const opacity = interpolate(frame, [TITLE_AT, TITLE_AT + 9], [0.7, 0], { ...CLAMP, easing: EASE_OUT });
+  return frame >= TITLE_AT && opacity > 0 ? <AbsoluteFill style={{ background: "#FFFFFF", opacity, pointerEvents: "none" }} /> : null;
+};
+
 export const Personality: React.FC = () => (
   // REC is pressed on this card: "this is you, on tape".
   <TapeCard active="rec">
     <Stage scene="personality" primaryShare={0.46} primary={<Shot />} secondary={<Reveal />} />
+    <Flash />
   </TapeCard>
 );

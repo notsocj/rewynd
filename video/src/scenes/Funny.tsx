@@ -7,7 +7,7 @@
 // counts, so the scene is never empty.
 
 import React from "react";
-import { Appear } from "../components/Appear";
+import { Appear, Words } from "../components/Appear";
 import { plural } from "../components/format";
 import { useRecap } from "../recap/context";
 import { Stage, useSlotWidth } from "../tape/Stage";
@@ -69,11 +69,12 @@ const Lines: React.FC = () => {
 const Headline: React.FC = () => {
   const { props, theme, s, font } = useRecap();
   return (
-    <Appear delay={6}>
-      <div style={{ fontSize: 60 * s, fontWeight: font.black, letterSpacing: "-0.03em", lineHeight: 1.05, textShadow: theme.osdShadow }}>
-        {props.story.captions.funny ?? "Caught on tape."}
-      </div>
-    </Appear>
+    <div style={{ fontSize: 60 * s, fontWeight: font.black, letterSpacing: "-0.03em", lineHeight: 1.05, textShadow: theme.osdShadow }}>
+      <Words
+        delay={6}
+        text={props.story.captions.funny ?? "Caught on tape."}
+      />
+    </div>
   );
 };
 

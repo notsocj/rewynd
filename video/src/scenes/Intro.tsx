@@ -4,7 +4,7 @@
 
 import React from "react";
 import { AGENT_LABELS } from "../../../contract/recap";
-import { Appear } from "../components/Appear";
+import { Words } from "../components/Appear";
 import { periodName } from "../components/format";
 import { Caption } from "../components/Hero";
 import { useRecap } from "../recap/context";
@@ -30,8 +30,7 @@ export const Intro: React.FC = () => {
           // instead of stretching across the column.
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 56 * s }}>
             <TapeLabel title={stats.period.tapeLabel} subtitle={`TAPE ${tapeNumber("intro")} · REWYND`} size={1.1} />
-            <Appear delay={10} distance={40}>
-              <div
+            <div
                 style={{
                   fontSize: 132 * s,
                   fontWeight: font.black,
@@ -42,9 +41,9 @@ export const Intro: React.FC = () => {
                   overflowWrap: "anywhere",
                 }}
               >
-                {headline}
+                {/* Word by word: the title of the tape being "written". */}
+                <Words text={headline} delay={10} />
               </div>
-            </Appear>
             <TypedPrompt command={`rewynd --${stats.period.kind} ${name.toLowerCase()}`} fontSize={42 * s} delay={22} cursorAtEnd />
             {agents ? (
               <Caption delay={34} size={44} dim>

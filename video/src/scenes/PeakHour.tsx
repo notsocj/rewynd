@@ -3,7 +3,8 @@
 // per hour, the peak lit in the accent color).
 
 import React from "react";
-import { interpolate, useCurrentFrame } from "remotion";
+import { interpolate, random, useCurrentFrame } from "remotion";
+import { CLAMP, EASE_OUT } from "../components/motion";
 import { Appear } from "../components/Appear";
 import { hourLabel, plural } from "../components/format";
 import { Caption, HeroText } from "../components/Hero";
@@ -32,9 +33,14 @@ const HourMeters: React.FC = () => {
           // Columns light up left to right, a couple of frames apart, each
           // filling bottom-up to its level.
           const target = m > 0 ? Math.max(1, Math.round((m / max) * SEGMENTS)) : 0;
-          const lit = Math.round(
-            interpolate(frame, [12 + h * 1.2, 22 + h * 1.2], [0, target], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }),
-          );
+          const fillEnd = 22 + h * 1.2;
+          const filled = Math.round(interpolate(frame, [12 + h * 1.2, fillEnd], [0, target], { ...CLAMP, easing: EASE_OUT }));
+          // Once filled, each column flickers like a live level meter (never
+          // above its real level; see LevelMeter.tsx). The peak column holds still.
+          const drop = frame > fillEnd && h !== peak && target > 2 ? Math.floor(random(`peak-${h}-${Math.floor(frame / 3)}`) * 2.2) : 0;
+          const lit = Math.max(0, filled - drop);
+          // The peak column glows in a slow pulse once everything has landed.
+          const glow = h === peak && frame > fillEnd ? 0.5 + 0.5 * Math.sin((frame - fillEnd) / 5) : 0;
           return (
             <div key={h} style={{ width: colW, display: "flex", flexDirection: "column-reverse", gap: segGap }}>
               {Array.from({ length: SEGMENTS }, (_, i) => (
@@ -44,6 +50,7 @@ const HourMeters: React.FC = () => {
                     height: segH,
                     borderRadius: 3,
                     background: i < lit ? (h === peak ? theme.accent : theme.fg) : theme.faint,
+                    boxShadow: i < lit && glow > 0 ? `0 0 ${18 * glow * s}px ${theme.accent}` : undefined,
                   }}
                 />
               ))}

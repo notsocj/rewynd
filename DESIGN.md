@@ -114,12 +114,29 @@ Footer on every card: `◀◀ made with rewynd` and the repo URL (`props.repoUrl
 
 ## 6. Motion
 
-- 30fps. Each card is 4 s: ~0.6 s in, then holding.
-- **Every scene starts with a rewind glitch** (9 frames, ~0.3 s): the picture tears into 7 strips shoved sideways, white noise lines flash, a big `◀◀` shows, REW is pressed, then it snaps to PLAY. Randomness uses Remotion's seeded `random()`, so every render is identical.
-- Hero numbers **count up** over ~1 s with an ease-out and land with a small punch (1 → 1.04 → 1).
-- Entrances use springs (`damping ≈ 11–15`, `mass ≈ 0.6–0.8`), not linear tweens.
-- List rows print 4 frames apart, like command output.
-- Something always moves during the hold (REC blink, cursor blink, tape counter, tracking band, twinkling stars) so a card never looks frozen.
+All curves, springs and shared timings live in `video/src/components/motion.ts`. Scenes import them; don't invent new values.
+
+- **Curves:** entrances use a strong ease-out `bezier(0.23, 1, 0.32, 1)`. On-screen movement uses ease-in-out `bezier(0.77, 0, 0.175, 1)`. Constant motion (camera drift, tracking band) is linear. Never ease-in.
+- **Springs:** low bounce. `snappy` for buttons and stamps, `settle` for larger objects. Tape decks are mechanical, not rubbery.
+- 30fps. Each card is 3–4.5 s: ~0.6 s in, then holding.
+
+**Between scenes (one continuous tape motion):**
+- **In:** the rewind glitch (9 frames): 7 torn strips, noise lines, a big `◀◀` (`▶` on the first scene), REW pressed.
+- **Out:** a tracking slip over the last 8 frames: the picture tears and slides up, running straight into the next glitch.
+- **End of the video:** a CRT switch-off. The picture collapses into a bright line, then the line shrinks to nothing.
+
+**During a scene:**
+- **Handheld camcorder** (`tape/Camera.tsx`): content slowly pushes in (+2%, linear) and drifts a few px with ±0.18° tilt, from overlapping sines. The OSD, buttons, footer and scan lines stay locked like a viewfinder overlay. It's off on the share card, so the still is never tilted.
+- **Transport:** after the glitch, the card's button (PLAY / REC / STOP) dips to 92% and springs back as it lights up.
+- **Entrances:** captions rise with the ease-out (`Appear`). Big statement headlines arrive **word by word**, 3 frames apart (`Words`). List rows print 4 frames apart.
+- **Hero numbers** count up (~1 s), land with a punch (1 → 1.04 → 1), and **split red/cyan** for ~⅓ s like a VHS signal catching up.
+- **LED meters stay live:** after filling, they flicker 0–2 segments *below* their level (10 updates per second) with a peak-hold segment at the real level. They never show more than the real number.
+- **Peak hour:** the peak column glows in a slow pulse. **Heatmap:** a ring pings out of the busiest day every second.
+- **Personality reveal** (the screenshot moment): the badge pulls from blurred to sharp focus, the title is *stamped* (115% → 100%) under a camera flash, then the pin floats gently.
+- **Hardest bug:** FAIL shakes as it prints; when PASS prints, a red strike-through draws across the bug line.
+- **Shipped:** the `+added −removed` diff counts up to the real totals.
+- Ambient life during holds: REC blink, cursor blink, tape counter, tracking band, twinkling badge stars.
+- Only `transform` / `opacity` / `filter` animate. Nothing starts from `scale(0)` (the smallest entrance scale is 0.6, on the badge).
 
 ---
 

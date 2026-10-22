@@ -27,3 +27,6 @@ video/public/fonts/satoshi/
 
 # Dev-only copies of rendered stills used by the "Compare" composition.
 video/public/compare/
+
+# Local Claude Code / editor config (preview servers etc.), not part of rewynd
+.claude/

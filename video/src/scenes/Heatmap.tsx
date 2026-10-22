@@ -8,6 +8,7 @@
 
 import React from "react";
 import { interpolate, useCurrentFrame } from "remotion";
+import { EASE_OUT } from "../components/motion";
 import type { Stats } from "../../../contract/recap";
 import { Appear } from "../components/Appear";
 import { plural, weekday } from "../components/format";
@@ -85,6 +86,12 @@ const Calendar: React.FC = () => {
     };
   };
 
+  // Once the grid is in, a ring pulses out of the busiest day every second,
+  // like a sonar ping: "this one".
+  const peakIndex = days.findIndex((d) => d.date === peak);
+  const settled = 16 + days.length * stepFrames;
+  const ping = frame > settled ? ((frame - settled) % 30) / 30 : -1;
+
   return (
     <div style={{ fontFamily: font.family }}>
       {isMonth ? (
@@ -101,6 +108,22 @@ const Calendar: React.FC = () => {
         </div>
       ) : null}
       <div style={{ position: "relative", width: gridW, height: gridH }}>
+        {peakIndex >= 0 && ping >= 0 ? (
+          <div
+            style={{
+              position: "absolute",
+              left: place(peakIndex).col * (cell + gap),
+              top: place(peakIndex).row * (cell + gap),
+              width: cell,
+              height: cell,
+              borderRadius: isMonth ? 10 * s : 2,
+              border: `${4 * s}px solid ${theme.accent}`,
+              // Grows and fades with an ease-out: fast burst, soft tail.
+              scale: 1 + EASE_OUT(ping) * 0.6,
+              opacity: 1 - EASE_OUT(ping),
+            }}
+          />
+        ) : null}
         {days.map((d, i) => (
           <div key={d.date} style={cellStyle(d, i)}>
             {isMonth && cell > 60 ? (
