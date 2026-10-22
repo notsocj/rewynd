@@ -1,22 +1,32 @@
 ---
 name: rewynd
-description: Make a "tape rewind meets terminal" recap video of the user's month (or year) of AI coding from their local Claude Code, Codex, Gemini CLI and OpenCode history. 100% local. Use when the user asks for their rewynd, AI coding recap, year/month in review, or "wrapped" for coding agents.
-argument-hint: "[YYYY-MM | --year YYYY] [--github]"
+description: Make a "tape rewind meets terminal" recap video (or one share image) of the user's month or year of AI coding from their local Claude Code, Codex, Gemini CLI and OpenCode history, 100% local. Also shows what history rewynd has saved and explains Claude Code's 30-day deletion. Use when the user asks for their rewynd, an AI coding recap, month/year in review, a "wrapped" for coding agents, or rewynd status/setup.
+argument-hint: "[card | status | setup] [YYYY-MM | --year YYYY] [--github]"
 ---
 
 # /rewynd — your month of AI coding, as a video
 
 You turn the user's local agent history into a short vertical video. Most of the work is done by scripts that cost zero tokens. Your jobs are to run them in order, ask the user a few short questions, and write a small, funny, honest `story.json`.
 
+## Modes
+
+Pick the mode from the user's words or the first argument (`$ARGUMENTS`):
+
+| Mode | When | What to do |
+|---|---|---|
+| **video** (default) | "make my rewynd", a month, `--year`... | Steps 1–8 below |
+| **card** | `card`, "just an image / screenshot" | Steps 1–6, then step 7 with `render --card` (a PNG instead of a video) |
+| **status** | `status`, "what's saved?", "is my history safe?" | [Status](#status-mode) |
+| **setup** | `setup`, first install, "how do I keep my whole year?" | [Setup](#setup-mode) |
+
 ## Paths (work these out first)
 
-- **REWYND** (the rewynd folder) = `${CLAUDE_PLUGIN_ROOT}`.
-  If that still reads literally as `${CLAUDE_PLUGIN_ROOT}` (it wasn't replaced with a real path, e.g. in Codex or a plain skills install), REWYND is the folder **two levels above this SKILL.md** (this file is `REWYND/skills/rewynd/SKILL.md`; resolve symlinks with `realpath`).
-- **DATA** = `${CLAUDE_PLUGIN_DATA}`. If it wasn't replaced with a real path, use an empty string `""` (rewynd then keeps its data in `REWYND/data`).
+- **SKILL** = `${CLAUDE_SKILL_DIR}`: the folder this SKILL.md is in, which holds everything rewynd runs (`scripts/`, `contract/`, `video/`). If that text wasn't replaced with a real path (e.g. in Codex), SKILL is the folder containing this SKILL.md (resolve symlinks with `realpath`).
+- **DATA** = `${CLAUDE_PLUGIN_DATA}`. If that wasn't replaced with a real path (any install that isn't the Claude Code plugin), use an empty string `""`. rewynd then picks the right place itself: `~/.rewynd` for `npx skills add` installs (which keeps your history safe when the skill is updated), or the repo's `data/` in a git clone.
 - Every command below is:
-  `node --disable-warning=ExperimentalWarning "REWYND/scripts/cli.ts" <command> --data-dir "DATA" [flags]`
+  `node --disable-warning=ExperimentalWarning "SKILL/scripts/cli.ts" <command> --data-dir "DATA" [flags]`
   Each prints ONE JSON object on stdout. Progress goes to stderr.
-- Outputs go to `OUT` = `DATA/output` (or `REWYND/output` when DATA is empty).
+- Outputs go to `OUT`: the `output/` folder next to rewynd's `data/`. Its path is in the `files` of the `collect` result.
 
 Requirements: Node **22.18 or newer** (`node --version`). If it's older, tell the user to update Node and stop.
 
@@ -103,9 +113,32 @@ Run `render` (add `--format wide|both` only if they want to override the saved f
 
 ### 8. Wrap up (2 lines)
 - Where the video is, and that it's made to post (the footer links back to rewynd).
-- Remind them: **run `/rewynd` (or `/rewynd-status`) at least once every 30 days** so no day is lost. Claude Code deletes transcripts after 30 days by default, and rewynd never changes that setting. It just keeps its own daily totals.
+- Remind them: **run `/rewynd` (or `/rewynd status`) at least once every 30 days** so no day is lost. Claude Code deletes transcripts after 30 days by default, and rewynd never changes that setting. It just keeps its own daily totals.
+
+## Status mode
+
+1. Run `status`. It **saves any new days first**, so the answer is current.
+2. Summarize in a short list, plain language:
+   - **Saved:** `saved.days` days, from `saved.first` to `saved.last` (this run: `saved.thisRun.created` new, `saved.thisRun.updated` updated). Data folder: `dataDir`.
+   - **Agents:** one line each from `agents[]`: found or not, `humanSessions` you started, plus background runs. Use `note` when something is skipped (e.g. Cursor/Antigravity "support planned later", OpenCode "installed, no sessions").
+   - **At risk:** from `claudeRetention`: Claude Code keeps transcripts `cleanupPeriodDays` days (`isDefault` = the 30-day default). The oldest transcript (`oldestTranscript`) is deleted around `oldestDeletedOn`. Days already saved are safe. Say: "Run /rewynd or /rewynd status at least once every N days."
+   - **Gaps:** if `saved.gapsLast90Days > 0`, list `gapRanges` as days rewynd never saw (it wasn't run in time). They can't be recovered. They show as "no tape" in the video, not as zero work.
+3. If `gitGuard.ok` is false: warn that personal stats are tracked by git and show `gitGuard.fix` (don't run it yourself).
+4. If `previousData` is non-empty (days saved by an older rewynd install), ask: "Copy N saved days from <dir> into your current rewynd?" On yes, run `migrate-data --from "<dir>"` (it copies, never moves, and never shrinks a saved day) and report the result.
+
+## Setup mode
+
+Optional first-run explainer. It explains one thing, saves what's on disk now, and changes **nothing** else.
+1. **Explain, in 3 short lines:**
+   - Claude Code deletes session transcripts after **30 days** by default (`cleanupPeriodDays`). It's a deliberate security default: transcripts can contain code and secrets.
+   - rewynd **doesn't change that setting** (or any agent setting). It keeps its own **daily totals** (counts, hours, project names, never your messages) in its own `data/` folder.
+   - Once a day is saved, it counts in every future recap, even after the transcripts are gone.
+2. **Run `status`** and report it as in status mode (the first run can take ~30 seconds on a big history).
+3. **The one thing to remember:** "Run `/rewynd` or `/rewynd status` **at least once every <cleanupPeriodDays> days**." Mention `claudeRetention.oldestDeletedOn` as the next day at risk.
+4. Finish with: "When you're ready for the video, run `/rewynd`."
 
 ## Never
+- Never edit `~/.claude/settings.json` or any other agent's settings or files, even if the user asks rewynd to "fix" retention. If they want longer retention, point them to Claude Code's own `cleanupPeriodDays` setting and let them change it themselves.
 - Never change any agent's settings or files (including `cleanupPeriodDays`). Read-only, always.
 - Never send raw logs anywhere, never paste message samples into the chat, never upload anything. The only network use is `--github`, and only when asked.
 - Never write Remotion code. The video template is fixed and only receives props.

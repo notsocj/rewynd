@@ -2,12 +2,12 @@
 node_modules/
 # The ROOT lockfile only pins dev tools (typescript). Claude Code auto-installs
 # a plugin's dependencies when a lockfile sits next to package.json, and rewynd
-# needs no runtime dependencies at its root, so we keep it out. (video/ keeps
+# needs no runtime dependencies at its root, so we keep it out. (skills/rewynd/video/ keeps
 # its own package-lock.json: that one matters for reproducible renders.)
 /package-lock.json
 
 # Files the renderer copies from the user (custom font / music)
-video/public/rewynd-user/
+skills/rewynd/video/public/rewynd-user/
 
 # rewynd's own memory: one aggregate file per day + saved design choices.
 # Personal stats. Must never reach GitHub (scripts/store/git-guard.ts warns if it does).
@@ -20,13 +20,13 @@ output/
 # Satoshi is licensed under the Fontshare FF EULA, which forbids
 # redistributing the font files (including uploading to a public repo).
 # Each developer drops their own copy here; see DESIGN.md → Typography.
-video/public/fonts/satoshi/
+skills/rewynd/video/public/fonts/satoshi/
 
 # OS junk
 .DS_Store
 
 # Dev-only copies of rendered stills used by the "Compare" composition.
-video/public/compare/
+skills/rewynd/video/public/compare/
 
 # Local Claude Code / editor config (preview servers etc.), not part of rewynd
 .claude/

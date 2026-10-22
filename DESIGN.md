@@ -40,7 +40,7 @@ Rules:
 
 ## 2. Color
 
-Four themes ("color fields"), listed in `video/src/themes.json` (what the user picks from) with their colors in `video/src/theme.ts`. Each theme has **one accent** for its hero numbers.
+Four themes ("color fields"), listed in `skills/rewynd/video/src/themes.json` (what the user picks from) with their colors in `skills/rewynd/video/src/theme.ts`. Each theme has **one accent** for its hero numbers.
 
 | Token | Hex | Use |
 |---|---|---|
@@ -114,7 +114,7 @@ Footer on every card: `◀◀ made with rewynd` and the repo URL (`props.repoUrl
 
 ## 6. Motion
 
-All curves, springs and shared timings live in `video/src/components/motion.ts`. Scenes import them; don't invent new values.
+All curves, springs and shared timings live in `skills/rewynd/video/src/components/motion.ts`. Scenes import them; don't invent new values.
 
 - **Curves:** entrances use a strong ease-out `bezier(0.23, 1, 0.32, 1)`. On-screen movement uses ease-in-out `bezier(0.77, 0, 0.175, 1)`. Constant motion (camera drift, tracking band) is linear. Never ease-in.
 - **Springs:** low bounce. `snappy` for buttons and stamps, `settle` for larger objects. Tape decks are mechanical, not rubbery.
@@ -142,7 +142,7 @@ All curves, springs and shared timings live in `video/src/components/motion.ts`.
 
 ## 7. The scenes
 
-One component per `SceneId` (`video/src/scenes/`, durations in `scenes/registry.ts`). render.ts drops scenes with nothing to show; each scene still handles empty data on its own.
+One component per `SceneId` (`skills/rewynd/video/src/scenes/`, durations in `scenes/registry.ts`). render.ts drops scenes with nothing to show; each scene still handles empty data on its own.
 
 | Scene | s | Primary | Secondary | Pressed |
 |---|---|---|---|---|
@@ -193,7 +193,7 @@ Four questions at most, so it fits in one Claude Code question prompt (`AskUserQ
 
 | # | Question | Options | Default |
 |---|---|---|---|
-| 1 | **Theme** | The themes in `video/src/themes.json` (Night · Blue screen · Midnight · Tape label) or "Match my personality" (`auto`) | Match my personality |
+| 1 | **Theme** | The themes in `skills/rewynd/video/src/themes.json` (Night · Blue screen · Midnight · Tape label) or "Match my personality" (`auto`) | Match my personality |
 | 2 | **Font** | Inter · My own font (path to a `.ttf`/`.otf`/`.woff2` on their machine) | Inter |
 | 3 | **Hide project names?** | No · Yes ("Project A/B/C") | Ask when client work is likely |
 | 4 | **Format** | Vertical 9:16 (TikTok/Reels/Stories) · Wide 16:9 (X/YouTube) · Both | Vertical |
@@ -208,11 +208,11 @@ This is how people get Satoshi or any other font we can't put in the repo. scrip
 ### Saved choices
 - Answers are saved to `data/preferences.json` inside the rewynd folder (git-ignored, kept across updates; see rewynd-context.md §19).
 - Later runs show the saved choices and ask "Use the same look?" (yes/change) instead of all four questions again.
-- `/rewynd-card` uses the same preferences.
+- `/rewynd card` uses the same preferences.
 
 ### Props shape
 
-The props are `RecapProps` from **`contract/recap.ts`** (shared with scripts/): `{ stats, story, prefs, scenes, repoUrl, customFontStaticPath, musicStaticPath }`, with `prefs: { theme, font, format, hideProjectNames, musicFile }`. `video/src/schema.ts` mirrors it in zod for Studio and checks at compile time that the two still match.
+The props are `RecapProps` from **`contract/recap.ts`** (shared with scripts/): `{ stats, story, prefs, scenes, repoUrl, customFontStaticPath, musicStaticPath }`, with `prefs: { theme, font, format, hideProjectNames, musicFile }`. `skills/rewynd/video/src/schema.ts` mirrors it in zod for Studio and checks at compile time that the two still match.
 
 ### What this means for the template
 - Colors are never hardcoded in scenes. Scenes read the `Theme` for `prefs.theme` (with "auto" resolved from the personality) through `useRecap()`.

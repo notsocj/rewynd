@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
-import { readLineBuffers, parseJson } from "../scripts/lib/lines.ts";
+import { readLineBuffers, parseJson } from "../skills/rewynd/scripts/lib/lines.ts";
 import { tempDir } from "./helpers.ts";
 
 async function lines(file: string): Promise<string[]> {

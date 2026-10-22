@@ -3,11 +3,11 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { activeMinutesOf, DayBuilder } from "../scripts/store/build-days.ts";
-import { mergeDay } from "../scripts/store/merge.ts";
-import { setTimezone } from "../scripts/lib/time.ts";
-import { newSession, type Session } from "../scripts/sources/types.ts";
-import type { DayRecord } from "../scripts/store/day.ts";
+import { activeMinutesOf, DayBuilder } from "../skills/rewynd/scripts/store/build-days.ts";
+import { mergeDay } from "../skills/rewynd/scripts/store/merge.ts";
+import { setTimezone } from "../skills/rewynd/scripts/lib/time.ts";
+import { newSession, type Session } from "../skills/rewynd/scripts/sources/types.ts";
+import type { DayRecord } from "../skills/rewynd/scripts/store/day.ts";
 
 setTimezone("UTC");
 const T = (hhmm: string, date = "2026-10-21") => Date.parse(`${date}T${hhmm}:00Z`);

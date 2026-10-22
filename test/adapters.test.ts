@@ -7,10 +7,10 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
-import { claudeCode } from "../scripts/sources/claude-code.ts";
-import { codex } from "../scripts/sources/codex.ts";
-import { gemini } from "../scripts/sources/gemini.ts";
-import { opencode } from "../scripts/sources/opencode.ts";
+import { claudeCode } from "../skills/rewynd/scripts/sources/claude-code.ts";
+import { codex } from "../skills/rewynd/scripts/sources/codex.ts";
+import { gemini } from "../skills/rewynd/scripts/sources/gemini.ts";
+import { opencode } from "../skills/rewynd/scripts/sources/opencode.ts";
 import { all, tempDir, writeJson, writeJsonl } from "./helpers.ts";
 
 const RANGE = { from: "1970-01-01", to: "2100-01-01" };

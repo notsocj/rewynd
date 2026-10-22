@@ -6,10 +6,10 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
-import { readCommits, isNoise } from "../scripts/shipped/git-log.ts";
-import { classify, codexBranchCommits } from "../scripts/shipped/ai-match.ts";
-import { checkNotTracked } from "../scripts/store/git-guard.ts";
-import { setStateRoot } from "../scripts/lib/paths.ts";
+import { readCommits, isNoise } from "../skills/rewynd/scripts/shipped/git-log.ts";
+import { classify, codexBranchCommits } from "../skills/rewynd/scripts/shipped/ai-match.ts";
+import { checkNotTracked } from "../skills/rewynd/scripts/store/git-guard.ts";
+import { setStateRoot } from "../skills/rewynd/scripts/lib/paths.ts";
 import { tempDir } from "./helpers.ts";
 
 function repo(): { dir: string; git: (...a: string[]) => string } {

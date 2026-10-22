@@ -14,8 +14,23 @@ import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 
-/** The rewynd folder itself (repo clone or installed plugin): two levels up from scripts/lib/. */
+/**
+ * The rewynd SKILL folder: two levels up from scripts/lib/. Everything rewynd
+ * runs (scripts/, contract/, video/) lives inside it, so the folder works on
+ * its own when `npx skills add` copies just this folder into
+ * ~/.agents/skills/rewynd. (In the repo it's <repo>/skills/rewynd.)
+ */
 export const REWYND_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+
+/**
+ * The whole rewynd repo, when this skill folder is still inside a git clone
+ * (or a Claude Code plugin copy of it): <repo>/skills/rewynd → <repo>.
+ * null when the skill was installed on its own (npx skills add).
+ */
+export const REPO_ROOT: string | null = (() => {
+  const repo = path.resolve(REWYND_ROOT, "..", "..");
+  return fs.existsSync(path.join(repo, ".claude-plugin", "plugin.json")) ? repo : null;
+})();
 
 /** The Remotion template that renders the video. */
 export const VIDEO_DIR = path.join(REWYND_ROOT, "video");
@@ -31,7 +46,11 @@ export const VIDEO_DIR = path.join(REWYND_ROOT, "video");
 //      plugin install the skill passes ${CLAUDE_PLUGIN_DATA}, which survives
 //      plugin updates, unlike the versioned plugin folder itself)
 //   2. REWYND_DATA_DIR environment variable (for people who want it elsewhere)
-//   3. the rewynd folder itself (git clone / Codex skills install): <repo>/data
+//   3. a git clone of the repo: <repo>/data (next to the code, git-ignored)
+//   4. otherwise ~/.rewynd: the skill was installed on its own with
+//      `npx skills add`, and `npx skills update` DELETES the skill folder
+//      before copying the new version in. Anything saved inside it would be
+//      lost, so the history lives in rewynd's own folder in your home instead.
 //
 // An empty string counts as "not set". When a skill's ${...} placeholder isn't
 // substituted (e.g. in Codex), the shell expands it to "" and we fall through.
@@ -47,7 +66,7 @@ export function stateRoot(): string {
   if (stateRootOverride) return stateRootOverride;
   const env = process.env.REWYND_DATA_DIR;
   if (env && env.trim()) return path.resolve(expandHome(env.trim()));
-  return REWYND_ROOT;
+  return REPO_ROOT ?? path.join(home(), ".rewynd");
 }
 
 /** data/: rewynd's memory. Git-ignored, never pushed, kept across updates. */

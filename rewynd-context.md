@@ -682,3 +682,25 @@ Verified end to end on a real machine: months of saved days from many GB of logs
 - [x] Create the GitHub repo `notsocj/rewynd`, `git init`, first commit (Oct 22).
 - [ ] Music: none bundled; only user-supplied.
 - [ ] Windows paths are coded but untested.
+
+---
+
+## 22. Install with the skills CLI (Oct 22, 2026)
+
+Primary install: `npx skills add https://github.com/notsocj/rewynd --skill rewynd` (the [skills CLI](https://skills.sh), v1.7.4 checked).
+
+What the CLI does (read from its source):
+- It copies **only the skill's folder** into `~/.agents/skills/<name>` and symlinks it into each agent (`~/.claude/skills`, Codex reads `~/.agents/skills` directly).
+- `npx skills update` **deletes that folder** (`rm -rf`) before copying the new version.
+
+What changed in rewynd because of that:
+- **Everything rewynd runs moved into `skills/rewynd/`**: `scripts/`, `contract/`, `video/`, plus its own `package.json` (`"type": "module"`). Relative imports didn't change, because the three folders moved together. `test/skill-folder.test.ts` fails if any file inside imports something outside it.
+- **One skill with modes** instead of four: `/rewynd`, `/rewynd card`, `/rewynd status`, `/rewynd setup` (`--skill rewynd` installs a single skill). The old `rewynd-card/status/setup` folders are gone.
+- **Data location** (`scripts/lib/paths.ts`):
+  1. `--data-dir`, which the Claude Code plugin sets to `${CLAUDE_PLUGIN_DATA}`
+  2. `REWYND_DATA_DIR`
+  3. `<repo>/data` when the skill sits inside a clone of the repo
+  4. otherwise **`~/.rewynd`**, because a skills-CLI update would wipe a `data/` inside the skill folder. This replaces the original "data/ inside the rewynd folder" rule for skills-CLI installs; clones keep it.
+- SKILL.md finds its scripts via `${CLAUDE_SKILL_DIR}` (works for plugin and plain skill installs), falling back to "the folder this SKILL.md is in" for other agents.
+- The renderer runs Remotion through `node node_modules/@remotion/cli/remotion-cli.js`, not the `.bin` symlink, and treats deps as missing unless `@remotion/cli/dist/index.js` exists (copies with resolved symlinks broke the `.bin` launcher).
+- Verified: installed into a throwaway home with the real CLI; `status` defaulted to `~/.rewynd/data`; `collect` read real history; a fresh first render installed deps + the headless browser and rendered the card in ~23 s. The tracked skill folder is ~0.7 MB.

@@ -2,12 +2,12 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { redact } from "../scripts/samples/redact.ts";
-import { categorize, categorizeCommand } from "../scripts/sources/tool-categories.ts";
-import { numbersIn, validateStory } from "../scripts/story/validate-story.ts";
-import { parsePeriod } from "../scripts/stats/period.ts";
-import { roundToHundred } from "../scripts/stats/build-stats.ts";
-import type { Stats } from "../contract/recap.ts";
+import { redact } from "../skills/rewynd/scripts/samples/redact.ts";
+import { categorize, categorizeCommand } from "../skills/rewynd/scripts/sources/tool-categories.ts";
+import { numbersIn, validateStory } from "../skills/rewynd/scripts/story/validate-story.ts";
+import { parsePeriod } from "../skills/rewynd/scripts/stats/period.ts";
+import { roundToHundred } from "../skills/rewynd/scripts/stats/build-stats.ts";
+import type { Stats } from "../skills/rewynd/contract/recap.ts";
 
 test("redact: keys, tokens, env lines, emails, home paths, URL credentials", () => {
   const input = [

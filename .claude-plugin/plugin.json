@@ -1,10 +1,21 @@
 {
   "name": "rewynd",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Your month (and year) of AI coding as a video. Reads local Claude Code, Codex, Gemini CLI and OpenCode history, 100% on your machine. Never changes agent settings, never stores your messages.",
-  "author": { "name": "notsocj" },
+  "author": {
+    "name": "notsocj"
+  },
   "homepage": "https://github.com/notsocj/rewynd",
   "repository": "https://github.com/notsocj/rewynd",
   "license": "MIT",
-  "keywords": ["recap", "wrapped", "year-in-review", "video", "remotion", "claude-code", "codex", "stats"]
+  "keywords": [
+    "recap",
+    "wrapped",
+    "year-in-review",
+    "video",
+    "remotion",
+    "claude-code",
+    "codex",
+    "stats"
+  ]
 }

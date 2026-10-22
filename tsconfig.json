@@ -15,5 +15,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["scripts", "contract", "test"]
+  "include": ["skills/rewynd/scripts", "skills/rewynd/contract", "test"]
 }

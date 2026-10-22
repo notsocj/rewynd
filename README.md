@@ -21,26 +21,25 @@ rewynd reads your local **Claude Code, Codex, Gemini CLI and OpenCode** history 
 
 You need **Node.js 22.18 or newer** (`node --version`).
 
-### Claude Code (plugin)
+```bash
+npx skills add https://github.com/notsocj/rewynd --skill rewynd
+```
+
+That's the [skills CLI](https://skills.sh). It works with Claude Code, Codex, Cursor, Gemini CLI, OpenCode and other agents, and asks which ones to install for. Add `-g` to install it for all your projects. Then ask your agent for `/rewynd` (or just "make my rewynd").
+
+The first render downloads the video template's dependencies and a headless browser once (about a minute). After that it runs offline.
+
+<details>
+<summary>Other ways to install</summary>
+
+**Claude Code plugin**
 
 ```
 /plugin marketplace add notsocj/rewynd
 /plugin install rewynd@rewynd
 ```
 
-Then run `/rewynd`. (Commands show up as `/rewynd:rewynd`, `/rewynd:rewynd-status`... in the menu.)
-
-### Codex (skills)
-
-```bash
-git clone https://github.com/notsocj/rewynd ~/rewynd
-mkdir -p ~/.agents/skills
-for s in rewynd rewynd-card rewynd-status rewynd-setup; do ln -s ~/rewynd/skills/$s ~/.agents/skills/$s; done
-```
-
-Then ask Codex for `$rewynd` (or "make my rewynd").
-
-### Just the command line
+**From a clone (for development)**
 
 ```bash
 git clone https://github.com/notsocj/rewynd && cd rewynd
@@ -48,16 +47,20 @@ npm run rewynd -- collect --month 2026-10   # saves your days + writes output/st
 npm run rewynd -- status
 ```
 
-The story part needs an agent (Claude or Codex) to write `output/story.json`; see [skills/rewynd/SKILL.md](skills/rewynd/SKILL.md).
+The story part needs an agent to write `output/story.json`; see [skills/rewynd/SKILL.md](skills/rewynd/SKILL.md).
+
+</details>
 
 ## Commands
 
-| Command | What it does |
+It's one skill with four modes:
+
+| Say | What it does |
 |---|---|
-| `/rewynd` | Pick a month (or year) → save new days → Claude writes your story → you pick a look → render the video |
-| `/rewynd-card` | Same, but one shareable image instead of a video |
-| `/rewynd-status` | What's saved, what's still on disk, and when Claude Code will delete your oldest transcript |
-| `/rewynd-setup` | Optional. Explains the 30-day deletion and saves your first days. Changes no settings |
+| `/rewynd` | Pick a month (or year) → save new days → your agent writes your story → you pick a look → render the video |
+| `/rewynd card` | Same, but one shareable image instead of a video |
+| `/rewynd status` | What's saved, what's still on disk, and when Claude Code will delete your oldest transcript |
+| `/rewynd setup` | Optional. Explains the 30-day deletion and saves your first days. Changes no settings |
 
 Options: a month (`2026-09`), `--year 2026`, and `--github` (see below).
 
@@ -67,7 +70,7 @@ By default Claude Code permanently deletes session transcripts older than 30 day
 
 **rewynd doesn't touch that setting.** Instead, every time you run any rewynd command it saves **one small summary per day** into its own `data/` folder. Once a day is saved, it counts in every future recap, even after the transcript is gone.
 
-**So: run `/rewynd` or `/rewynd-status` at least once every 30 days**, and your December recap covers your whole year.
+**So: run `/rewynd` or `/rewynd status` at least once every 30 days**, and your December recap covers your whole year.
 
 ## What rewynd reads, stores and shows
 
@@ -106,7 +109,7 @@ Claude never reads raw logs. A script checks the story before rendering, and **e
 
 ### Network
 
-None, with one opt-in exception: **`--github`** adds merged PRs, releases and new stars. It runs only when you ask, only through your existing `gh` login (`gh auth status`), read-only. rewynd never asks for, reads or stores a token. All of it lives in one file: [scripts/shipped/github.ts](scripts/shipped/github.ts).
+None, with one opt-in exception: **`--github`** adds merged PRs, releases and new stars. It runs only when you ask, only through your existing `gh` login (`gh auth status`), read-only. rewynd never asks for, reads or stores a token. All of it lives in one file: [github.ts](skills/rewynd/scripts/shipped/github.ts).
 
 (The **first** render also downloads the video template's dependencies and a headless browser, once. That's installing software, not sending your data anywhere.)
 
@@ -114,11 +117,12 @@ None, with one opt-in exception: **`--github`** adds merged PRs, releases and ne
 
 | Installed as | `data/` lives in | Survives updates? |
 |---|---|---|
+| `npx skills add` | `~/.rewynd/data/` | ✅ Yes. `npx skills update` replaces the skill folder, so your history lives outside it, in `~/.rewynd` |
 | Claude Code plugin | `~/.claude/plugins/data/rewynd-rewynd/data/` (`${CLAUDE_PLUGIN_DATA}`) | ✅ Yes. ⚠ `/plugin uninstall` deletes it unless you pass `--keep-data` |
-| git clone / Codex skills | `<rewynd folder>/data/` | ✅ `git pull` never touches it. ⚠ Don't delete and re-clone the folder |
+| git clone | `<repo>/data/` | ✅ `git pull` never touches it. ⚠ Don't delete and re-clone the folder |
 | anywhere | `$REWYND_DATA_DIR/data/` if you set it | ✅ You choose |
 
-Plugin updates install into a new versioned folder, so rewynd keeps your data in the plugin's own persistent folder instead. Switching install methods? `/rewynd-status` finds days saved by an older install and offers to copy them over (copy, never move, never shrinking a saved day).
+Skill and plugin updates replace the installed folder, so rewynd never keeps your history inside it. Switching install methods? `/rewynd status` finds days saved by an older install and offers to copy them over (copy, never move, never shrinking a saved day).
 
 **Delete everything rewynd saved:** delete that `data/` folder (and `output/`).
 
@@ -143,11 +147,12 @@ Before rendering, rewynd asks once and remembers the answers:
 npm install            # dev tools only (TypeScript); rewynd has no runtime dependencies
 npm test               # node:test, synthetic fixtures, never reads your real history
 npm run typecheck
-cd video && npm install && npx remotion studio   # preview the video template
+cd skills/rewynd/video && npm install && npx remotion studio   # preview the video template
 ```
 
-- Node runs the TypeScript in `scripts/` directly (type stripping): no build step.
-- [contract/recap.ts](contract/recap.ts) is the shared contract between the scripts and the video.
+- **Everything rewynd runs lives in [skills/rewynd/](skills/rewynd/)** (`scripts/`, `contract/`, `video/`), because `npx skills add` copies only that folder. A test fails if anything in it imports a file from outside it.
+- Node runs the TypeScript in `skills/rewynd/scripts/` directly (type stripping): no build step.
+- [contract/recap.ts](skills/rewynd/contract/recap.ts) is the shared contract between the scripts and the video.
 - [rewynd-context.md](rewynd-context.md) has the full design notes; [DESIGN.md](DESIGN.md) has the visual system.
 - Every file is commented in plain language. Please keep it that way.
 

@@ -1,0 +1,10 @@
+{
+  "name": "rewynd-skill",
+  "version": "0.2.0",
+  "private": true,
+  "description": "The rewynd skill folder: everything needed to run it (scripts/, contract/, video/). `npx skills add` copies only this folder, so it must work on its own.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  }
+}

@@ -172,9 +172,19 @@ function stageAsset(file: string, kind: "font" | "music"): string | null {
   return `rewynd-user/${name}`;
 }
 
+/**
+ * Remotion's command-line program, as a plain JS file we run with `node`.
+ * Not node_modules/.bin/remotion: that's a symlink (a .cmd on Windows), and
+ * when a skill folder gets copied with symlinks resolved, the .bin launcher
+ * breaks while the real file keeps working.
+ */
+const REMOTION_CLI = () => path.join(VIDEO_DIR, "node_modules", "@remotion", "cli", "remotion-cli.js");
+
 /** Install the video template's dependencies on first render (one-time download). */
 export function ensureVideoDeps(): void {
-  if (exists(path.join(VIDEO_DIR, "node_modules", ".bin", "remotion"))) return;
+  // Check a real file deep inside the package, not just the folder: a
+  // half-finished or badly copied install must trigger a clean reinstall.
+  if (exists(REMOTION_CLI()) && exists(path.join(VIDEO_DIR, "node_modules", "@remotion", "cli", "dist", "index.js"))) return;
   info("First render: installing the video template's dependencies (one-time, needs internet)…");
   const lock = exists(path.join(VIDEO_DIR, "package-lock.json"));
   const r = spawnSync("npm", [lock ? "ci" : "install", "--no-audit", "--no-fund"], {
@@ -207,8 +217,7 @@ export function render(opts: RenderOptions): RenderResult | { errors: string[] }
       ? ["still", "src/index.ts", CARD_COMPOSITION, out, `--props=${propsFile}`, port]
       : ["render", "src/index.ts", VIDEO_COMPOSITION, out, `--props=${propsFile}`, port];
     info(`Rendering ${path.basename(out)}…`);
-    const bin = path.join(VIDEO_DIR, "node_modules", ".bin", process.platform === "win32" ? "remotion.cmd" : "remotion");
-    const r = spawnSync(bin, args, { cwd: VIDEO_DIR, stdio: ["ignore", 2, 2], shell: process.platform === "win32" });
+    const r = spawnSync(process.execPath, [REMOTION_CLI(), ...args], { cwd: VIDEO_DIR, stdio: ["ignore", 2, 2] });
     if (r.status !== 0) throw new Error(`Remotion failed to render ${path.basename(out)} (see the log above)`);
     files.push(out);
   }

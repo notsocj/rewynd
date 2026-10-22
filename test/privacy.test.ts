@@ -8,7 +8,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { listFiles, REWYND_ROOT } from "../scripts/lib/paths.ts";
+import { listFiles, REPO_ROOT, REWYND_ROOT } from "../skills/rewynd/scripts/lib/paths.ts";
 
 const scriptFiles = listFiles(path.join(REWYND_ROOT, "scripts"), (f) => f.endsWith(".ts"));
 
@@ -34,7 +34,7 @@ test("only rewynd's own files are ever written", () => {
 });
 
 test("data/ and output/ are git-ignored", () => {
-  const ignore = fs.readFileSync(path.join(REWYND_ROOT, ".gitignore"), "utf8").split("\n").map((l) => l.trim());
+  const ignore = fs.readFileSync(path.join(REPO_ROOT!, ".gitignore"), "utf8").split("\n").map((l) => l.trim());
   assert.ok(ignore.includes("data/"));
   assert.ok(ignore.includes("output/"));
 });
