@@ -1,0 +1,9 @@
+# Keep LF line endings on every OS. Windows checkouts would otherwise turn
+# files into CRLF, which breaks SKILL.md frontmatter parsing, JSONL fixtures
+# and byte-exact tests.
+* text=auto eol=lf
+
+# Binary assets: never touch.
+*.png binary
+*.woff2 binary
+*.mp4 binary

@@ -27,7 +27,8 @@ test("only rewynd's own files are ever written", () => {
   const writers = /\b(writeFileSync|appendFileSync|renameSync|unlinkSync|rmSync|copyFileSync|createWriteStream|mkdirSync)\b/;
   const allowed = new Set(["lib/files.ts", "render/render.ts", "migrate.ts"]);
   for (const f of scriptFiles) {
-    const rel = path.relative(path.join(REWYND_ROOT, "scripts"), f);
+    // Forward slashes on every OS, so "lib/files.ts" matches on Windows too.
+    const rel = path.relative(path.join(REWYND_ROOT, "scripts"), f).split(path.sep).join("/");
     if (allowed.has(rel)) continue;
     assert.ok(!writers.test(fs.readFileSync(f, "utf8")), `${rel} writes files; route writes through lib/files.ts`);
   }

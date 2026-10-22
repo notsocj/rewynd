@@ -4,6 +4,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { readCommits, isNoise } from "../skills/rewynd/scripts/shipped/git-log.ts";
@@ -14,7 +15,8 @@ import { tempDir } from "./helpers.ts";
 
 function repo(): { dir: string; git: (...a: string[]) => string } {
   const dir = tempDir("rewynd-git-");
-  const env = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_SYSTEM: "/dev/null" };
+  // os.devNull: "/dev/null" on macOS/Linux, "\\.\nul" on Windows.
+  const env = { ...process.env, GIT_CONFIG_GLOBAL: os.devNull, GIT_CONFIG_SYSTEM: os.devNull };
   const git = (...a: string[]) => execFileSync("git", ["-C", dir, ...a], { env, encoding: "utf8" });
   git("init", "-q", "-b", "main");
   git("config", "user.email", "me@example.com");
@@ -28,7 +30,7 @@ function commit(r: ReturnType<typeof repo>, file: string, lines: number, msg: st
   fs.writeFileSync(path.join(r.dir, file), Array.from({ length: lines }, (_, i) => `line ${i} ${Math.random()}`).join("\n"));
   r.git("add", "-A");
   execFileSync("git", ["-C", r.dir, "commit", "-q", "-m", msg], {
-    env: { ...process.env, GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date, GIT_CONFIG_GLOBAL: "/dev/null" },
+    env: { ...process.env, GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date, GIT_CONFIG_GLOBAL: os.devNull, GIT_CONFIG_SYSTEM: os.devNull },
   });
 }
 

@@ -21,10 +21,12 @@ export function checkNotTracked(): GuardResult {
     if (!isDir(parent)) continue;
     const top = git(parent, ["rev-parse", "--show-toplevel"], 10_000);
     if (!top.ok) continue; // not inside a git repo: nothing can be pushed
-    const repo = top.stdout.trim();
-    // git reports the REAL path (e.g. /private/var/... on macOS) while ours may
-    // go through a symlink (/var/...), so compare real paths.
-    const realDir = path.join(fs.realpathSync(parent), path.basename(dir));
+    const repo = path.resolve(top.stdout.trim());
+    // git reports the REAL path (e.g. /private/var/... on macOS, or the long
+    // C:\Users\runneradmin\... form on Windows) while ours may go through a
+    // symlink (/var/...) or a short 8.3 name (C:\Users\RUNNER~1\...), so
+    // compare real paths. realpathSync.native expands both.
+    const realDir = path.join(fs.realpathSync.native(parent), path.basename(dir));
     const rel = path.relative(repo, realDir) || ".";
     const ls = git(repo, ["ls-files", "--", rel], 10_000);
     const tracked = ls.stdout.split("\n").filter(Boolean);

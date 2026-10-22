@@ -1,0 +1,59 @@
+# CI: run rewynd's tests and type checks on every push and pull request,
+# on macOS, Linux and Windows, with the oldest supported Node (22.18, which
+# first runs .ts files without a flag) and the current one (24).
+#
+# No secrets, no network beyond installing npm packages: the tests use
+# synthetic fixtures only and never read anyone's real agent history.
+
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.os }} · Node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: ["22.18", "24"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          # The root has no lockfile on purpose (see .gitignore); the video
+          # template's lockfile is the one worth caching.
+          cache-dependency-path: skills/rewynd/video/package-lock.json
+
+      # Tests use git to build throwaway repos; give git an identity.
+      - name: Configure git
+        run: |
+          git config --global user.email "ci@example.com"
+          git config --global user.name "rewynd CI"
+          git config --global init.defaultBranch main
+
+      - name: Install dev tools (TypeScript)
+        run: npm install --no-audit --no-fund
+
+      - name: Tests
+        run: npm test
+
+      - name: Type check (scripts)
+        run: npm run typecheck
+
+      - name: Install video template
+        working-directory: skills/rewynd/video
+        run: npm ci --no-audit --no-fund
+
+      - name: Type check (video template)
+        working-directory: skills/rewynd/video
+        run: npx tsc --noEmit

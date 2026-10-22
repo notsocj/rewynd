@@ -1,5 +1,7 @@
 # ◀◀ rewynd
 
+[![CI](https://github.com/notsocj/rewynd/actions/workflows/ci.yml/badge.svg)](https://github.com/notsocj/rewynd/actions/workflows/ci.yml)
+
 **Your month of AI coding, as a video.**
 
 rewynd reads your local **Claude Code, Codex, Gemini CLI and OpenCode** history and turns it into a short "tape rewind meets terminal" recap video: hours, your main AI, your peak hour, top projects, what you shipped, and a coder personality. Claude writes the funny parts. Everything runs on your machine.
