@@ -1,8 +1,10 @@
-// The two real outputs of the template:
+// The real outputs of the template:
 // - <Rewynd>: the full video. Plays props.scenes in order; every scene
 //   starts with the rewind glitch. Adds the user's music if they gave one.
 // - <RewyndCard>: the share card, one still image of the outro summary
 //   (its last frame, once everything has animated in).
+// - <RewyndScene>: one carousel slide, a still of any scene at its settled
+//   frame. scripts/render.ts renders one per scene for Instagram / X.
 //
 // Plus <SingleScene>, used by the Samples folder in Studio to preview one
 // scene at a time.
@@ -14,10 +16,11 @@
 import React from "react";
 import { Audio } from "@remotion/media";
 import { AbsoluteFill, Sequence, Series, staticFile, type CalculateMetadataFunction } from "remotion";
-import type { RecapProps } from "../../contract/recap";
+import type { RecapProps, SceneId } from "../../contract/recap";
 import { RecapProvider } from "./recap/context";
-import { SCENES, sceneFrames, totalFrames } from "./scenes/registry";
-import type { SingleSceneProps } from "./schema";
+import { SCENES, sceneFrames, settledFrame, totalFrames } from "./scenes/registry";
+import { StillContext } from "./components/still";
+import type { RewyndSceneProps, SingleSceneProps } from "./schema";
 import { CameraContext, seedOf } from "./tape/Camera";
 import { SceneIdContext } from "./templates/frame";
 import { RewindGlitch } from "./tape/RewindGlitch";
@@ -33,6 +36,8 @@ export const calculateRecapMetadata: CalculateMetadataFunction<RecapProps> = ({ 
 });
 
 export const calculateCardMetadata: CalculateMetadataFunction<RecapProps> = ({ props }) => sizeFor(props.prefs.format);
+
+export const calculateSlideMetadata: CalculateMetadataFunction<RewyndSceneProps> = ({ props }) => sizeFor(props.prefs.format);
 
 export const calculateSingleMetadata: CalculateMetadataFunction<SingleSceneProps> = ({ props }) => ({
   durationInFrames: sceneFrames(props.scene),
@@ -71,22 +76,38 @@ export const Rewynd: React.FC<RecapProps> = (props) => {
   );
 };
 
-export const RewyndCard: React.FC<RecapProps> = (props) => {
-  const Outro = SCENES.outro.component;
+/**
+ * One scene frozen at its settled frame (see settledFrame), with no rewind
+ * glitch, the camera off (a still is never caught mid-tilt) and anything
+ * that blinks held on.
+ * A still only has frame 0, so <Freeze> can't reach a later frame; instead a
+ * Sequence that "started" N frames ago makes frame 0 read as frame N inside
+ * the scene.
+ */
+const SettledScene: React.FC<{ scene: SceneId }> = ({ scene }) => {
+  const Scene = SCENES[scene].component;
   return (
-    <RecapProvider props={props}>
-      {/* Show the outro's last frame, when everything has animated in.
-          A still only has frame 0, so <Freeze> can't reach a later frame;
-          instead a Sequence that "started" N-1 frames ago makes frame 0 of
-          the still read as frame N-1 inside the outro. */}
-      <Sequence from={-(sceneFrames("outro") - 1)}>
-        <SceneIdContext.Provider value="outro">
-          <Outro />
+    <StillContext.Provider value={true}>
+      <Sequence from={-settledFrame(scene)}>
+        <SceneIdContext.Provider value={scene}>
+          <Scene />
         </SceneIdContext.Provider>
       </Sequence>
-    </RecapProvider>
+    </StillContext.Provider>
   );
 };
+
+export const RewyndCard: React.FC<RecapProps> = (props) => (
+  <RecapProvider props={props}>
+    <SettledScene scene="outro" />
+  </RecapProvider>
+);
+
+export const RewyndScene: React.FC<RewyndSceneProps> = ({ scene, ...recap }) => (
+  <RecapProvider props={recap}>
+    <SettledScene scene={scene} />
+  </RecapProvider>
+);
 
 export const SingleScene: React.FC<SingleSceneProps> = ({ recap, scene }) => {
   const Scene = SCENES[scene].component;

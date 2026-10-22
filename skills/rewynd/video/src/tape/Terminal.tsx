@@ -7,6 +7,7 @@
 
 import React, { createContext, useContext } from "react";
 import { interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import { useIsStill } from "../components/still";
 import { useRecap } from "../recap/context";
 
 // True inside a TerminalWindow. The terminal is always dark, so text in it
@@ -31,8 +32,9 @@ type CursorProps = {
 export const Cursor: React.FC<CursorProps> = ({ color, width = "0.5em", height = "0.95em" }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
+  const still = useIsStill();
   // On for half a second, off for half a second, like a real terminal.
-  const on = Math.floor(frame / (fps / 2)) % 2 === 0;
+  const on = still || Math.floor(frame / (fps / 2)) % 2 === 0;
   return (
     <span
       style={{

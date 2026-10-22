@@ -11,6 +11,7 @@
 
 import React from "react";
 import { AbsoluteFill, random, useCurrentFrame, useVideoConfig } from "remotion";
+import { useIsStill } from "../../components/still";
 import { useRecap } from "../../recap/context";
 import { Camera } from "../../tape/Camera";
 import { Footer } from "../../tape/Footer";
@@ -35,7 +36,7 @@ export const ArcadeFrame: React.FC<CardProps> = ({ children }) => {
     : { label: "CREDITS", value: String(agents.length).padStart(2, "0") };
 
   // "PRESS ◀◀ TO REWYND" blinks like an arcade attract screen (on 0.7s, off 0.3s).
-  const blinkOn = frame % fps < fps * 0.7;
+  const blinkOn = useIsStill() || frame % fps < fps * 0.7;
 
   const bar: React.CSSProperties = { fontFamily: font.ui, fontSize: 30 * s, lineHeight: 1.8 };
   return (

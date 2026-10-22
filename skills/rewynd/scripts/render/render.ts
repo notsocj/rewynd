@@ -1,5 +1,6 @@
 // =============================================================================
-// render/render.ts — stage 3: stats.json + story.json + design prefs → video.
+// render/render.ts — stage 3: stats.json + story.json + design prefs → video
+// (or the share card, or one carousel image per scene).
 //
 //   1. validate story.json against stats.json (no invented numbers)
 //   2. resolve the theme ("auto" → the theme mapped to your personality)
@@ -13,6 +14,7 @@
 // =============================================================================
 
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import {
@@ -35,8 +37,9 @@ import { loadPrefs } from "./prefs.ts";
 /** Composition ids registered in video/src/Root.tsx. */
 export const VIDEO_COMPOSITION = "Rewynd";
 export const CARD_COMPOSITION = "RewyndCard";
+export const SCENE_COMPOSITION = "RewyndScene";
 
-export type RenderOptions = { card: boolean; format?: DesignPrefs["format"] };
+export type RenderOptions = { card: boolean; carousel?: boolean; format?: DesignPrefs["format"] };
 export type RenderResult = { files: string[]; props: string; scenes: SceneId[]; theme: string; accent: string | null };
 
 // -----------------------------------------------------------------------------
@@ -226,6 +229,16 @@ export function ensureVideoDeps(): void {
   if (r.status !== 0) throw new Error("couldn't install the video template's dependencies (npm failed, see above)");
 }
 
+/** Run the Remotion CLI in video/. `what` names the file for the error message. */
+function remotion(args: string[], what: string): void {
+  const r = spawnSync(process.execPath, [REMOTION_CLI(), ...args], { cwd: VIDEO_DIR, stdio: ["ignore", 2, 2] });
+  if (r.status !== 0) throw new Error(`Remotion failed to render ${what} (see the log above)`);
+}
+
+// Its own port, so a Remotion Studio left open on the default port (3000)
+// can't make the render fail.
+const port = () => `--port=${3100 + Math.floor(Math.random() * 800)}`;
+
 export function render(opts: RenderOptions): RenderResult | { errors: string[] } {
   const { props, errors } = buildProps(opts);
   if (errors.length) return { errors };
@@ -240,17 +253,44 @@ export function render(opts: RenderOptions): RenderResult | { errors: string[] }
     propsFile = path.join(outputDir(), `props${formats.length > 1 ? `-${format}` : ""}.json`);
     writeJsonAtomic(propsFile, p);
     const suffix = format === "wide" ? "-wide" : "";
+    if (opts.carousel) {
+      files.push(...renderCarousel(p, path.join(outputDir(), `carousel-${slug}${suffix}`)));
+      continue;
+    }
     const out = path.join(outputDir(), opts.card ? `rewynd-card-${slug}${suffix}.png` : `rewynd-${slug}${suffix}.mp4`);
-    // Its own port, so a Remotion Studio left open on the default port
-    // (3000) can't make the render fail.
-    const port = `--port=${3100 + Math.floor(Math.random() * 800)}`;
     const args = opts.card
-      ? ["still", "src/index.ts", CARD_COMPOSITION, out, `--props=${propsFile}`, port]
-      : ["render", "src/index.ts", VIDEO_COMPOSITION, out, `--props=${propsFile}`, port];
+      ? ["still", "src/index.ts", CARD_COMPOSITION, out, `--props=${propsFile}`, port()]
+      : ["render", "src/index.ts", VIDEO_COMPOSITION, out, `--props=${propsFile}`, port()];
     info(`Rendering ${path.basename(out)}…`);
-    const r = spawnSync(process.execPath, [REMOTION_CLI(), ...args], { cwd: VIDEO_DIR, stdio: ["ignore", 2, 2] });
-    if (r.status !== 0) throw new Error(`Remotion failed to render ${path.basename(out)} (see the log above)`);
+    remotion(args, path.basename(out));
     files.push(out);
   }
   return { files, props: propsFile, scenes: props.scenes, theme: props.prefs.theme, accent: props.prefs.accent };
+}
+
+/**
+ * The carousel: one still per scene, in video order, at the moment the scene
+ * has settled (dir/01-intro.png, 02-hours.png…). The template is bundled
+ * once and every slide reuses that bundle: bundling is the slow part.
+ */
+function renderCarousel(props: RecapProps, dir: string): string[] {
+  fs.mkdirSync(dir, { recursive: true });
+  // Clear the slides of an earlier render, which may have had more scenes.
+  for (const f of fs.readdirSync(dir)) if (/^\d{2}-\w+\.png$/.test(f)) fs.rmSync(path.join(dir, f));
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "rewynd-carousel-"));
+  try {
+    const bundle = path.join(tmp, "bundle");
+    info(`Preparing ${props.scenes.length} slides for ${path.basename(dir)}/…`);
+    remotion(["bundle", "src/index.ts", `--out-dir=${bundle}`], path.basename(dir));
+    return props.scenes.map((scene, i) => {
+      const out = path.join(dir, `${String(i + 1).padStart(2, "0")}-${scene}.png`);
+      const sceneProps = path.join(tmp, `${scene}.json`);
+      writeJsonAtomic(sceneProps, { ...props, scene });
+      info(`Rendering ${path.basename(dir)}/${path.basename(out)}…`);
+      remotion(["still", bundle, SCENE_COMPOSITION, out, `--props=${sceneProps}`, port()], path.basename(out));
+      return out;
+    });
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
 }

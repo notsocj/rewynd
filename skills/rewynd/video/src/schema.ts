@@ -67,6 +67,15 @@ export const singleSceneSchema = z.object({
 
 export type SingleSceneProps = z.infer<typeof singleSceneSchema>;
 
+// One carousel slide (RewyndScene): props.json plus which scene to show.
+// Flat, not nested like the preview above, so scripts/render.ts only adds
+// one field to the props it already wrote.
+export const rewyndSceneSchema = recapSchema.extend({
+  scene: z.enum(sceneIds),
+});
+
+export type RewyndSceneProps = z.infer<typeof rewyndSceneSchema>;
+
 // Dev-only: puts up to four rendered stills side by side so design versions
 // can be compared in one image. Paths are inside video/public/.
 export const compareSchema = z.object({

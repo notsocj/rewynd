@@ -7,6 +7,7 @@
 
 import type React from "react";
 import type { SceneId } from "../../../contract/recap";
+import { EXIT_FRAMES } from "../components/motion";
 import { Funny } from "./Funny";
 import { HardestBug } from "./HardestBug";
 import { Heatmap } from "./Heatmap";
@@ -45,3 +46,11 @@ export const sceneFrames = (id: SceneId) => Math.round(SCENES[id].seconds * FPS)
 
 /** Total frames for a list of scenes (at least 1, so an empty list still renders). */
 export const totalFrames = (ids: SceneId[]) => Math.max(1, ids.reduce((sum, id) => sum + sceneFrames(id), 0));
+
+/**
+ * The frame a still image of one scene shows (carousel slides, share card):
+ * everything has animated in and the end-of-scene tracking slip hasn't
+ * started. The outro has no slip (it ends the tape), so it holds to its very
+ * last frame, which keeps its slide identical to the share card.
+ */
+export const settledFrame = (id: SceneId) => (id === "outro" ? sceneFrames(id) - 1 : sceneFrames(id) - EXIT_FRAMES - 1);
