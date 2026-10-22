@@ -80,6 +80,13 @@ Write exactly this shape (`contract/recap.ts` → `Story` is the source of truth
 
 Rules (the script checks them in step 5):
 - **Only use numbers that exist in `stats.json`.** Never invent or estimate. (One exception: `hardestBug.line` may also use its candidate's `bugMessages` or `userMessages` from `samples.json`.) For hours, use whole hours rounded **down** (`floor(totals.activeMinutes / 60)`, e.g. 5,172 minutes → "86 hours"), which is what the video shows.
+- **When the words name a stat, the number must be that stat**, not just any number in `stats.json`. The check matches:
+  - "why" / "please" / "thanks" / "fix it" / "still broken" / "sorry" + N times → `phrases.*` (a pair like "please and thanks" may use the sum)
+  - "after midnight" / "late night" + N sessions → `time.lateNightSessions`
+  - "cheated" / "switched" + N times → `agentSwitches.topSwitch.count` (or `sameDay` / `sameProject`)
+  - "double-checked" / "review" → `backgroundRuns` `review` counts; "helpers" / "sub-agents" → `subagent` counts
+  - N hours → `floor(totals.activeMinutes / 60)` (or `totals.activeHours` with 1 decimal); N sessions → `totals.sessions`; N commits → `shipped.commits` / `aiCommits`; N% AI (of commits) → `shipped.aiShare`
+  - …unless the line names something narrower: a project or agent ("lumen: 30 hours", "110 Codex sessions"), "longest session", "busiest day" / "biggest day", or the previous period ("last month"). Then it's that one's number.
 - **personality.id** must be one of: `3am-shipper, rewriter, polite-one, speedrunner, bug-whisperer, architect, juggler, marathoner, weekend-warrior`. Usually take `personalityHints[0]`. Pick from the top 3 only if the samples clearly fit another one better. `title` = the standard title for that id.
 - Keep text short. Captions ≤ 70 characters, `personality.line` ≤ 110, funny lines ≤ 90. Each one should read in about 2 seconds.
 - **Tone:** a playful roast, never mean. No swearing at the user.
