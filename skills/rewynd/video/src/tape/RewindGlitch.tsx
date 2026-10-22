@@ -37,6 +37,12 @@ type Props = {
   sceneFrames?: number;
   first?: boolean;
   last?: boolean;
+  // Play the rewind glitch at the start (in the video only the first scene
+  // does: the others arrive through a transition, see transitions/).
+  enter?: boolean;
+  // End with the tracking slip (Studio scene previews; the video uses real
+  // transitions between scenes instead).
+  slip?: boolean;
 };
 
 // Tells the card inside whether it's mid-rewind, so its transport bar can
@@ -96,11 +102,11 @@ const Noise: React.FC<{ seed: string; frame: number; opacity: number; count?: nu
   </>
 );
 
-export const RewindGlitch: React.FC<Props> = ({ children, seed, sceneFrames, first = false, last = false }) => {
+export const RewindGlitch: React.FC<Props> = ({ children, seed, sceneFrames, first = false, last = false, enter = true, slip = true }) => {
   const frame = useCurrentFrame();
 
   // ---------------- IN: rewind glitch ----------------
-  if (frame < GLITCH_FRAMES) {
+  if (enter && frame < GLITCH_FRAMES) {
     // 1 at the start of the glitch, 0 at the end: the effect fades out.
     const strength = interpolate(frame, [0, GLITCH_FRAMES], [1, 0]);
     const Icon = first ? PlayIcon : RewindIcon;
@@ -148,7 +154,7 @@ export const RewindGlitch: React.FC<Props> = ({ children, seed, sceneFrames, fir
         </AbsoluteFill>
       );
     }
-  } else if (sceneFrames !== undefined) {
+  } else if (sceneFrames !== undefined && slip) {
     // Tracking slip over the last EXIT_FRAMES, growing toward the cut.
     const e = interpolate(frame, [sceneFrames - EXIT_FRAMES, sceneFrames - 1], [0, 1], { ...CLAMP, easing: EASE_IN_OUT });
     if (e > 0) {

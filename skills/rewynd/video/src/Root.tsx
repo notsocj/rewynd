@@ -139,6 +139,20 @@ export const RemotionRoot: React.FC = () => {
 
       {/* Every scene in every card template, vertical, for design review. */}
       <Folder name="Templates">
+        {(["tape", "terminal", "receipt", "arcade"] as const).map((template) => (
+          <Composition
+            key={`video-${template}`}
+            id={`Video-${template}`}
+            component={Rewynd}
+            schema={recapSchema}
+            calculateMetadata={calculateRecapMetadata}
+            durationInFrames={300}
+            fps={FPS}
+            width={1080}
+            height={1920}
+            defaultProps={{ ...octoberProps, prefs: { ...octoberProps.prefs, theme: template, accent: null } }}
+          />
+        ))}
         {(["tape", "terminal", "receipt", "arcade"] as const).map((template) =>
           SCENE_ORDER.map((scene) => (
             <Composition

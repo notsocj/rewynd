@@ -65,7 +65,8 @@ export const CountUp: React.FC<Props> = ({ value, font, fontSize, color, textSha
   // ...and the signal "splits": red and cyan copies jump out sideways and
   // snap back over ~1/3 s, like a VHS picture catching up. Ease-out, so the
   // biggest split is right on the landing frame.
-  const split = interpolate(frame, [delay + fps, delay + fps + 10], [1, 0], { ...CLAMP, easing: EASE_OUT });
+  // (Zero before the landing: while it's still counting the number is clean.)
+  const split = frame < delay + fps ? 0 : interpolate(frame, [delay + fps, delay + fps + 10], [1, 0], { ...CLAMP, easing: EASE_OUT });
   const chroma = split > 0 ? `${-10 * split}px 0 rgba(255,59,48,${0.85 * split}), ${10 * split}px 0 rgba(0,229,255,${0.85 * split})` : "";
 
   return (

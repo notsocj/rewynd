@@ -120,16 +120,23 @@ All curves, springs and shared timings live in `skills/rewynd/video/src/componen
 - **Springs:** low bounce. `snappy` for buttons and stamps, `settle` for larger objects. Tape decks are mechanical, not rubbery.
 - 30fps. Each card is 3–4.5 s: ~0.6 s in, then holding.
 
-**Between scenes (one continuous tape motion):**
-- **In:** the rewind glitch (9 frames): 7 torn strips, noise lines, a big `◀◀` (`▶` on the first scene), REW pressed.
-- **Out:** a tracking slip over the last 8 frames: the picture tears and slides up, running straight into the next glitch.
-- **End of the video:** a CRT switch-off. The picture collapses into a bright line, then the line shrinks to nothing.
+**Between scenes** (`skills/rewynd/video/src/transitions/`): scenes overlap through a transition instead of cutting.
+- **Start of the video:** the rewind glitch with a big `▶` (the tape starts).
+- **Into the big moments** (personality reveal, outro): the **color morph**, 26 frames. A disc in the accent color grows from the middle until it floods the screen. The next card then opens through a growing circle from the same point, settling from 108%. Linear progress, with its own ease-in-out (cover) and ease-out (reveal).
+- **Everything else:** the template's **signature transition**, 18 frames, ease-in-out:
+  - Tape: **VHS roll**. The picture loses vertical hold and rolls down while the next rolls in from the top, through tracking noise, with `◀◀` flashing mid-roll.
+  - Terminal: **scroll**. Output pushes up and off as the next screen scrolls in.
+  - Receipt: **paper feed**. The receipt feeds out of the top while the next prints in from the bottom, with a 3° tilt.
+  - Arcade: **pixel dissolve**. 90px blocks fill the screen in random order, then clear to reveal the next screen.
+- Transitions that cover the screen first (morph, pixel dissolve) **hold the incoming card on its first frame until it's revealed**, so its entrance animations aren't wasted. Every card is lengthened by half its outgoing transition, so on-screen reading time doesn't shrink. The plan lives in `transitions/timeline.ts`, shared by the video and its duration calculation.
+- **End of the video:** the CRT switch-off. The picture collapses into a bright line, then the line shrinks to nothing.
+- The backdrop behind the transitions is the template's own background, so moving or tilted cards never show black corners.
 
 **During a scene:**
 - **Handheld camcorder** (`tape/Camera.tsx`): content slowly pushes in (+2%, linear) and drifts a few px with ±0.18° tilt, from overlapping sines. The OSD, buttons, footer and scan lines stay locked like a viewfinder overlay. It's off on the share card, so the still is never tilted.
 - **Transport:** after the glitch, the card's button (PLAY / REC / STOP) dips to 92% and springs back as it lights up.
 - **Entrances:** captions rise with the ease-out (`Appear`). Big statement headlines arrive **word by word**, 3 frames apart (`Words`). List rows print 4 frames apart.
-- **Hero numbers** count up (~1 s), land with a punch (1 → 1.04 → 1), and **split red/cyan** for ~⅓ s like a VHS signal catching up.
+- **Hero numbers** count up (~1 s), land with a punch (1 → 1.04 → 1), and **split red/cyan** for ~⅓ s like a VHS signal catching up (only on landing, never while counting).
 - **LED meters stay live:** after filling, they flicker 0–2 segments *below* their level (10 updates per second) with a peak-hold segment at the real level. They never show more than the real number.
 - **Peak hour:** the peak column glows in a slow pulse. **Heatmap:** a ring pings out of the busiest day every second.
 - **Personality reveal** (the screenshot moment): the badge pulls from blurred to sharp focus, the title is *stamped* (115% → 100%) under a camera flash, then the pin floats gently.
