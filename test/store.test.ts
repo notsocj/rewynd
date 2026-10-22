@@ -91,8 +91,11 @@ test("per agent: a new agent is added without shrinking the others", () => {
 
 test("migrate-data: copies days from a \"~/…\" folder exactly as `status` prints it", () => {
   const home = tempDir();
+  // os.homedir() reads HOME on macOS/Linux but USERPROFILE on Windows: set both.
   const oldHome = process.env.HOME;
+  const oldProfile = process.env.USERPROFILE;
   process.env.HOME = home;
+  process.env.USERPROFILE = home;
   try {
     const day = dayWith({ "claude-code": 3 }, 30);
     writeJson(path.join(home, ".rewynd", "data", "days", `${day.date}.json`), day);
@@ -100,7 +103,10 @@ test("migrate-data: copies days from a \"~/…\" folder exactly as `status` prin
     const r = migrateFrom("~/.rewynd/data");
     assert.equal(r.daysRead, 1);
   } finally {
-    process.env.HOME = oldHome;
+    if (oldHome === undefined) delete process.env.HOME;
+    else process.env.HOME = oldHome;
+    if (oldProfile === undefined) delete process.env.USERPROFILE;
+    else process.env.USERPROFILE = oldProfile;
     setStateRoot(null);
   }
 });
